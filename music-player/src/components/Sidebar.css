@@ -1,0 +1,285 @@
+/* src/components/Sidebar.css */
+.sidebar {
+  width: 240px;
+  background: rgba(75, 70, 70, 0.244);
+  position: fixed;
+  top: 70px;
+  left: 0;
+  bottom: 100px;
+  border-right: 1px solid rgba(255, 255, 255, 0);
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ✅ KHÔNG overflow ở đây */
+  overflow: visible;
+}
+
+/* ===== COLLAPSED ===== */
+.sidebar.collapsed {
+  width: 64px;
+}
+
+/* ===== NÚT TOGGLE ===== */
+.sidebar-toggle-btn {
+  position: absolute;
+  top: 20px;           /* ✅ cùng hàng với MENU title */
+  right: -14px;        /* ✅ nhô ra ngoài 50% */
+
+  width: 28px;
+  height: 28px;
+  background: #1a1a2e;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  color: #888;
+  cursor: pointer;
+  font-size: 0.7rem;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;         /* ✅ luôn nổi trên cùng */
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.5);
+  flex-shrink: 0;
+}
+
+.sidebar-toggle-btn:hover {
+  background: #1db954;
+  border-color: #1db954;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(29, 185, 84, 0.5);
+}
+
+/* ===== SCROLL WRAPPER - chỉ phần này scroll ===== */
+.sidebar-scroll {
+  position: absolute;
+  inset: 0;             /* top/right/bottom/left: 0 */
+  padding: 20px 0;
+  overflow-y: auto;     /* ✅ scroll nằm trong wrapper */
+  overflow-x: hidden;
+}
+
+/* ===== SCROLLBAR ===== */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ===== TITLE ===== */
+.sidebar-title {
+  color: #888;
+  font-size: 0.75rem;
+  letter-spacing: 2px;
+  padding: 10px 25px;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* ===== NAV ===== */
+.sidebar-nav {
+  margin-bottom: 8px;
+}
+
+/* ===== LINK ===== */
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 12px 0;
+  padding-left: 20px;
+  color: #b3b3b3;
+  text-decoration: none;
+  font-size: 0.95rem;
+  transition: all 0.3s;
+  white-space: nowrap;
+  overflow: hidden;
+  border-left: 3px solid transparent;
+}
+
+.sidebar-link svg {
+  flex-shrink: 0;
+  font-size: 1.1rem;
+}
+
+.sidebar-link span {
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.sidebar-link:hover,
+.sidebar-link.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  border-left: 3px solid #1db954;
+}
+
+/* ===== COLLAPSED - căn giữa icon ===== */
+.sidebar.collapsed .sidebar-link {
+  padding-left: 0;
+  justify-content: center;
+}
+
+.sidebar.collapsed .sidebar-link span {
+  opacity: 0;
+  width: 0;
+  pointer-events: none;
+}
+
+/* ===== PLAYLISTS ===== */
+.sidebar-playlists {
+  margin-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 10px;
+}
+
+.playlist-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 10px 0;
+  padding-left: 20px;
+  color: #b3b3b3;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+  overflow: hidden;
+  border-left: 3px solid transparent;
+}
+
+.playlist-item svg {
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+
+.playlist-item span {
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.sidebar.collapsed .playlist-item {
+  padding-left: 0;
+  justify-content: center;
+}
+
+.sidebar.collapsed .playlist-item span {
+  opacity: 0;
+  width: 0;
+  pointer-events: none;
+}
+
+.playlist-item:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  border-left-color: rgba(29, 185, 84, 0.4);
+}
+
+/* ===== CÁC PLAYLIST ===== */
+.sidebar-user-playlists {
+  margin-top: 8px;
+  padding: 0 8px;
+}
+
+/* Header section: title + nút tạo */
+.sidebar-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+/* Nút tạo playlist mới */
+.btn-create-playlist {
+  background: none;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 50%;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s, background 0.2s;
+  flex-shrink: 0; /* ✅ không bị co khi collapsed */
+}
+
+.btn-create-playlist:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Danh sách playlist */
+.user-playlist-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  /* ✅ Giới hạn chiều cao, có scroll nếu nhiều playlist */
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Ẩn scrollbar nhưng vẫn scroll được */
+.user-playlist-list::-webkit-scrollbar {
+  width: 3px;
+}
+.user-playlist-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+/* Link playlist */
+.playlist-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  color: #ccc;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.playlist-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.playlist-link.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.playlist-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  color: #1db954; /* ✅ màu xanh nổi bật */
+}
+
+.playlist-name {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Trạng thái loading / empty */
+.playlist-loading,
+.playlist-empty {
+  font-size: 12px;
+  color: #888;
+  padding: 6px 8px;
+  margin: 0;
+  font-style: italic;
+}

@@ -1,0 +1,325 @@
+/* src/components/admin/AdminStats.css */
+
+.admin-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ===== STAT CARDS ===== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-left: 4px solid var(--card-color);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: var(--card-color);
+  background: color-mix(in srgb, var(--card-color) 12%, transparent);
+  flex-shrink: 0;
+}
+
+.stat-info h3 {
+  font-size: 28px;
+  font-weight: 800;
+  color: #1a1d23;
+  margin: 0 0 4px;
+  line-height: 1;
+}
+
+.stat-info p {
+  font-size: 13px;
+  color: #999;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* ===== SECTIONS ===== */
+.stats-section {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.stats-section h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1d23;
+  margin: 0 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* ===== TABLE ===== */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.admin-table th {
+  text-align: left;
+  color: #999;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-bottom: 2px solid #f0f0f0;
+  background: #fafafa;
+}
+
+.admin-table th:first-child { border-radius: 8px 0 0 8px; }
+.admin-table th:last-child  { border-radius: 0 8px 8px 0; }
+
+.admin-table td {
+  padding: 14px 16px;
+  color: #444;
+  border-bottom: 1px solid #f5f5f5;
+  vertical-align: middle;
+}
+
+.admin-table tr:last-child td { border-bottom: none; }
+
+.admin-table tbody tr {
+  transition: background 0.15s;
+}
+
+.admin-table tbody tr:hover td {
+  background: #f9f9f9;
+}
+
+/* Role badge */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.role-badge.admin {
+  background: rgba(155, 89, 182, 0.12);
+  color: #9b59b6;
+}
+
+.role-badge.user {
+  background: rgba(52, 152, 219, 0.12);
+  color: #3498db;
+}
+
+/* Loading */
+.admin-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 80px;
+  color: #999;
+  font-size: 14px;
+}
+
+.admin-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px;
+  color: #999;
+}
+
+/* Spinner */
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #f0f0f0;
+  border-top-color: #1db954;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Thêm vào AdminStats.css */
+
+/* ===== CHART HEADER ===== */
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.chart-header h3 {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ===== DATA TABS ===== */
+.chart-data-tabs {
+  display: flex;
+  gap: 6px;
+  background: #f5f5f5;
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.chart-data-btn {
+  background: none;
+  border: none;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #999;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.chart-data-btn:hover {
+  color: #333;
+  background: rgba(0,0,0,0.04);
+}
+
+.chart-data-btn.active {
+  background: #fff;
+  color: var(--btn-color);
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* ===== CHART TYPE TOGGLE ===== */
+.chart-type-toggle {
+  display: flex;
+  background: #f5f5f5;
+  padding: 4px;
+  border-radius: 10px;
+  gap: 4px;
+}
+
+.chart-type-btn {
+  background: none;
+  border: none;
+  padding: 7px 12px;
+  border-radius: 8px;
+  color: #999;
+  cursor: pointer;
+  font-size: 15px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.chart-type-btn:hover {
+  color: #333;
+  background: rgba(0,0,0,0.04);
+}
+
+.chart-type-btn.active {
+  background: #fff;
+  color: #1db954;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* ===== CHART WRAPPER ===== */
+.chart-wrapper {
+  margin-top: 8px;
+}
+
+/* ===== CUSTOM TOOLTIP ===== */
+.chart-tooltip {
+  background: #1a1d23;
+  border-radius: 10px;
+  padding: 12px 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  font-size: 13px;
+  color: #fff;
+}
+
+.chart-tooltip-label {
+  font-size: 12px;
+  color: #888;
+  margin: 0 0 8px;
+  font-weight: 500;
+}
+
+.chart-tooltip p {
+  margin: 4px 0 0;
+}
+
+/* Sửa lại AdminStats.css - phần chart-time-toggle */
+
+.chart-time-toggle {
+  display: flex;
+  background: #f5f5f5;
+  padding: 4px;
+  border-radius: 10px;
+  gap: 4px;
+  border: 1px solid #e8e8e8; /* ✅ Thêm border */
+}
+
+.chart-time-btn {
+  background: none;
+  border: none;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #999;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.chart-time-btn:hover {
+  color: #333;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.chart-time-btn.active {
+  background: #fff;
+  color: #1db954;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: none; /* ✅ Bỏ border mặc định của button */
+}

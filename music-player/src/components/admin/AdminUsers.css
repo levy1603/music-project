@@ -1,0 +1,112 @@
+/* src/components/admin/AdminUsers.css */
+
+.admin-users {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.admin-users .admin-table {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* User cell */
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-cell img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid #f0f0f0;
+}
+
+.user-cell span {
+  font-weight: 600;
+  color: #1a1d23;
+}
+
+/* Status badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.status-badge.active {
+  background: rgba(29, 185, 84, 0.1);
+  color: #1db954;
+}
+
+.status-badge.active::before { background: #1db954; }
+
+.status-badge.banned {
+  background: rgba(231, 76, 60, 0.1);
+  color: #e74c3c;
+}
+
+.status-badge.banned::before { background: #e74c3c; }
+
+/* Banned row */
+.banned-row td {
+  opacity: 0.5;
+}
+
+/* Action buttons */
+.action-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-action {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 7px;
+  border-radius: 8px;
+  font-size: 13px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-action:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.btn-ban     { color: #e67e22; }
+.btn-ban:hover:not(:disabled)     { background: rgba(230,126,34,0.1); }
+
+.btn-unban   { color: #1db954; }
+.btn-unban:hover:not(:disabled)   { background: rgba(29,185,84,0.1); }
+
+.btn-promote { color: #9b59b6; }
+.btn-promote:hover:not(:disabled) { background: rgba(155,89,182,0.1); }
+
+.btn-demote  { color: #3498db; }
+.btn-demote:hover:not(:disabled)  { background: rgba(52,152,219,0.1); }
+
+.btn-delete  { color: #e74c3c; }
+.btn-delete:hover:not(:disabled)  { background: rgba(231,76,60,0.1); }

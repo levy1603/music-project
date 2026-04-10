@@ -1,0 +1,183 @@
+/* src/components/playlist/PlaylistCard.css */
+
+.playlist-card {
+  background: #1e1e1e;
+  border-radius: 12px;
+  overflow: visible; /* ✅ Đổi hidden → visible để dropdown không bị cắt */
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+  position: relative;
+}
+
+.playlist-card:hover {
+  background: #2a2a2a;
+  transform: translateY(-4px);
+}
+
+/* ✅ Thêm border-radius cho phần cover thay vì dùng overflow card */
+.card-cover {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px 12px 0 0; /* ✅ Bo góc trên */
+  overflow: hidden;              /* ✅ overflow hidden chỉ ở cover */
+}
+
+.card-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.playlist-card:hover .card-overlay {
+  opacity: 1;
+}
+
+.btn-play-card {
+  background: #1db954;
+  border: none;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.btn-play-card:hover {
+  transform: scale(1.1);
+}
+
+/* Info */
+.card-info {
+  padding: 12px;
+  position: relative; /* ✅ Thêm */
+}
+
+.card-info-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.card-songs {
+  font-size: 12px;
+  color: #aaa;
+  margin: 0;
+}
+
+/* Badge */
+.card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.card-badge.public  { background: rgba(29, 185, 84, 0.2); color: #1db954; }
+.card-badge.private { background: rgba(255, 255, 255, 0.1); color: #aaa; }
+
+/* ===== MENU ===== */
+.card-menu-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.btn-menu {
+  background: none;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  transition: color 0.2s, background 0.2s;
+}
+
+.btn-menu:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ✅ Dropdown hiện lên trên + z-index cao */
+.card-dropdown {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 4px); /* ✅ Hiện lên trên */
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  overflow: hidden;
+  z-index: 9999;            /* ✅ Z-index cao */
+  min-width: 140px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.card-dropdown button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  color: #ccc;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.card-dropdown button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.card-dropdown button.danger {
+  color: #e74c3c;
+}
+
+.card-dropdown button.danger:hover {
+  background: rgba(231, 76, 60, 0.1);
+}
+
+/* Empty cover */
+.card-empty-cover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2a2a2a;
+  color: #555;
+  font-size: 40px;
+}

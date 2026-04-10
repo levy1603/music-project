@@ -1,0 +1,171 @@
+/* src/App.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --sidebar-width: 240px;
+
+  /* ===== THEME DARK (mặc định) ===== */
+  --text-primary:   #ffffff;
+  --text-secondary: #b3b3b3;
+  --text-muted:     #888888;
+  --overlay-bg:     rgba(0, 0, 0, 0.45);
+  --card-bg:        rgba(255, 255, 255, 0.05);
+  --card-border:    rgba(255, 255, 255, 0.08);
+}
+
+/* ===== THEME LIGHT ===== */
+[data-theme="light"] {
+  --text-primary:   #0f0f23;
+  --text-secondary: #333333;
+  --text-muted:     #555555;
+  --overlay-bg:     rgba(255, 255, 255, 0.35);
+  --card-bg:        rgba(0, 0, 0, 0.06);
+  --card-border:    rgba(0, 0, 0, 0.1);
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #3d3d3d; /* ✅ màu mặc định - sẽ bị ghi đè bởi applyBackground */
+  color: var(--text-primary);
+  overflow: hidden;
+  position: relative;
+  transition: background 0.5s ease, color 0.3s ease;
+}
+
+/* ✅ Chỉ khai báo 1 lần duy nhất */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-bg);
+  z-index: 0;
+  pointer-events: none;
+  transition: background 0.4s ease;
+}
+
+.app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+.app-body {
+  display: flex;
+  margin-top: 70px;
+  margin-bottom: 100px;
+  height: calc(100vh - 150px);
+  background: transparent;
+}
+
+.main-content {
+  margin-left: var(--sidebar-width);
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background: transparent;
+  transition: margin-left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Custom Scrollbar */
+.main-content::-webkit-scrollbar { width: 8px; }
+.main-content::-webkit-scrollbar-track { background: transparent; }
+.main-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+.main-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* ===== THEME LIGHT - chữ tối ===== */
+[data-theme="light"] .header-logo h1 { color: #1db954; }
+[data-theme="light"] .user-name      { color: #0f0f23; }
+[data-theme="light"] .chevron        { color: #555; }
+
+[data-theme="light"] .sidebar-title  { color: #555; }
+[data-theme="light"] .sidebar-link   { color: #333; }
+[data-theme="light"] .playlist-item  { color: #333; }
+
+[data-theme="light"] .sidebar-link:hover,
+[data-theme="light"] .sidebar-link.active {
+  color: #0f0f23;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .sidebar-toggle-btn {
+  background: rgba(240, 240, 255, 0.95);
+  color: #555;
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .user-dropdown {
+  background: rgba(245, 245, 255, 0.97);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .dropdown-username { color: #0f0f23; }
+[data-theme="light"] .dropdown-email    { color: #555; }
+[data-theme="light"] .dropdown-item:hover { background: rgba(0, 0, 0, 0.05); }
+[data-theme="light"] .dropdown-item-text span  { color: #0f0f23; }
+[data-theme="light"] .dropdown-item-text small { color: #777; }
+[data-theme="light"] .dropdown-divider { background: rgba(0, 0, 0, 0.08); }
+
+/* ===== ANIMATED BACKGROUNDS ===== */
+body.animated-wave {
+  background: linear-gradient(
+    135deg, #1a1a2e, #1db954, #16213e
+  ) !important;
+  background-size: 400% 400% !important;
+  animation: waveAnim 8s ease infinite !important;
+}
+
+body.animated-particles {
+  background: radial-gradient(
+    ellipse at 20% 50%, #302b63 0%, #0f0c29 100%
+  ) !important;
+  background-size: 200% 200% !important;
+  animation: particleAnim 6s ease-in-out infinite !important;
+}
+
+body.animated-gradient {
+  background: linear-gradient(
+    135deg, #f953c6, #b91d73, #1db954, #005c97
+  ) !important;
+  background-size: 400% 400% !important;
+  animation: gradientAnim 6s linear infinite !important;
+}
+
+body.animated-stars {
+  background: #0f0f23 !important;
+  animation: starsAnim 3s ease-in-out infinite !important;
+}
+
+@keyframes waveAnim {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes particleAnim {
+  0%, 100% { background-position: 0% 0%; }
+  50%       { background-position: 100% 100%; }
+}
+
+@keyframes gradientAnim {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes starsAnim {
+  0%, 100% { filter: brightness(1); }
+  50%       { filter: brightness(1.15); }
+}

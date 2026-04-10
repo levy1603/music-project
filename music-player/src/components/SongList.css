@@ -1,0 +1,37 @@
+/* src/components/SongList.css */
+.song-list {
+  padding: 20px;
+}
+
+.song-list-title {
+  color: #fff;
+  font-size: 1.8rem;
+  margin-bottom: 25px;
+}
+
+.song-list-header {
+  display: flex;
+  align-items: center;
+  padding: 0 20px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 10px;
+  gap: 15px;
+  color: #888;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+}
+
+.col-index    { width: 30px;  text-align: center; flex-shrink: 0; }
+.col-cover    { width: 50px;  flex-shrink: 0; }
+.col-title    { flex: 1;      min-width: 0; }
+.col-duration { width: 55px;  text-align: center; flex-shrink: 0; }
+.col-album    { width: 150px; flex-shrink: 0; }
+.col-plays    { width: 110px; flex-shrink: 0; }
+.col-actions  { width: 30px;  flex-shrink: 0; }
+
+.no-songs {
+  text-align: center;
+  padding: 60px 20px;
+  color: #888;
+  font-size: 1.1rem;
+}

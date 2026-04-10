@@ -1,0 +1,190 @@
+/* src/components/SearchBar.css */
+
+.search-bar-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+}
+
+/* Search bar */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #2a2a2a;
+  border: 1px solid transparent;
+  border-radius: 24px;
+  padding: 8px 16px;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.search-bar.active {
+  border-color: #1db954;
+  background: #333;
+  border-radius: 24px 24px 0 0; /* ✅ Bo góc dưới khi panel mở */
+}
+
+.search-icon-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+
+.search-icon-btn:hover { color: #fff; }
+
+.search-bar input {
+  background: none;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 14px;
+  width: 100%;
+  placeholder-color: #888;
+}
+
+.search-bar input::placeholder { color: #888; }
+
+.search-clear-btn {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+
+.search-clear-btn:hover { color: #fff; }
+
+/* ===== PANEL GỢI Ý ===== */
+.search-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #333;
+  border: 1px solid #1db954;
+  border-top: none;
+  border-radius: 0 0 16px 16px;
+  overflow: hidden;
+  z-index: 9999;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* Header panel */
+.search-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px 6px;
+}
+
+.search-panel-header span {
+  font-size: 12px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.search-panel-all {
+  background: none;
+  border: none;
+  color: #1db954;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.search-panel-all:hover { color: #1ed760; }
+
+/* Danh sách gợi ý */
+.search-suggestions {
+  list-style: none;
+  padding: 4px 0;
+  margin: 0;
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.suggestion-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.suggestion-cover {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.suggestion-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.suggestion-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggestion-artist {
+  display: block;
+  font-size: 12px;
+  color: #aaa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggestion-tag {
+  font-size: 11px;
+  color: #666;
+  flex-shrink: 0;
+}
+
+/* Footer panel */
+.search-panel-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-top: 1px solid #444;
+  font-size: 12px;
+  color: #666;
+}
+
+kbd {
+  background: #444;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: #ccc;
+  font-family: inherit;
+}

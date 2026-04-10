@@ -1,0 +1,7 @@
+node_modules/
+uploads/songs/
+uploads/covers/
+uploads/videos/
+uploads/avatars/
+
+.env

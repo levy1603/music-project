@@ -1,0 +1,26 @@
+/* src/components/admin/AdminLayout.css */
+
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f0f2f5;
+}
+
+.admin-main {
+  flex: 1;
+  margin-left: 240px; /* ← Bằng width sidebar */
+  transition: margin-left 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.admin-main.collapsed {
+  margin-left: 70px;
+}
+
+.admin-body {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}

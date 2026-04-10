@@ -1,0 +1,100 @@
+/* src/components/admin/AdminSongs.css */
+
+.admin-songs {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Search */
+.admin-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  color: #999;
+}
+
+.admin-search svg { font-size: 15px; flex-shrink: 0; }
+
+.admin-search input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: #333;
+  font-size: 14px;
+}
+
+.admin-search input::placeholder { color: #bbb; }
+
+.admin-search span {
+  font-size: 12px;
+  color: #bbb;
+  white-space: nowrap;
+  background: #f5f5f5;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+/* Table wrapper */
+.admin-songs .admin-table {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* Song cell */
+.song-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.song-cell img {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.song-cell span {
+  font-weight: 500;
+  color: #1a1d23;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+/* Delete button */
+.btn-delete-song {
+  background: none;
+  border: none;
+  color: #ccc;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-delete-song:hover {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.08);
+}
+
+.btn-delete-song:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}

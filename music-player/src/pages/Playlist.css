@@ -1,0 +1,89 @@
+/* src/pages/Playlist.css */
+.playlist-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.playlist-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.playlist-title-icon {
+  font-size: 1.8rem;
+  color: #1db954;
+}
+
+.playlist-title h2 {
+  color: #fff;
+  font-size: 1.4rem;
+  margin: 0 0 4px 0;
+}
+
+.playlist-title span {
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.playlist-clear-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 80, 80, 0.1);
+  border: 1px solid rgba(255, 80, 80, 0.2);
+  color: #ff6464;
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.3s;
+}
+
+.playlist-clear-btn:hover {
+  background: rgba(255, 80, 80, 0.2);
+  border-color: rgba(255, 80, 80, 0.4);
+}
+
+/* ===== EMPTY ===== */
+.playlist-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  height: 400px;
+  color: #888;
+  text-align: center;
+}
+
+.playlist-empty-icon {
+  font-size: 4rem;
+  color: #333;
+}
+
+.playlist-empty p {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.playlist-login-btn {
+  background: #1db954;
+  border: none;
+  color: #fff;
+  padding: 10px 28px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.playlist-login-btn:hover {
+  background: #1ed760;
+  transform: scale(1.05);
+}
