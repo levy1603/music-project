@@ -1,16 +1,21 @@
 // src/components/admin/AdminLayout.js
 import React, { useState } from "react";
 import AdminSidebar from "./AdminSidebar";
-import AdminHeader from "./AdminHeader";
+import AdminHeader  from "./AdminHeader";
 import "./AdminLayout.css";
 
-const AdminLayout = ({ children, activeTab, setActiveTab }) => {
+const AdminLayout = ({
+  children,
+  activeTab,
+  setActiveTab,
+  onNavigateToSong, // 👈 THÊM
+}) => {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
     <div className="admin-layout">
 
-      {/* ===== SIDEBAR ===== */}
+      {/* ── SIDEBAR ── */}
       <AdminSidebar
         collapsed={collapsed}
         setCollapsed={setCollapsed}
@@ -18,11 +23,14 @@ const AdminLayout = ({ children, activeTab, setActiveTab }) => {
         setActiveTab={setActiveTab}
       />
 
-      {/* ===== MAIN ===== */}
+      {/* ── MAIN ── */}
       <div className={`admin-main ${collapsed ? "collapsed" : ""}`}>
 
-        {/* Header */}
-        <AdminHeader activeTab={activeTab} />
+        {/* Header - truyền callback xuống */}
+        <AdminHeader
+          activeTab={activeTab}
+          onNavigateToSong={onNavigateToSong} // 👈 THÊM
+        />
 
         {/* Content */}
         <div className="admin-body">

@@ -60,8 +60,8 @@ body::before {
 .app-body {
   display: flex;
   margin-top: 70px;
-  margin-bottom: 100px;
-  height: calc(100vh - 150px);
+  flex: 1;
+  min-height: 0;
   background: transparent;
 }
 

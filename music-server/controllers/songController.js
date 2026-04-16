@@ -1,8 +1,10 @@
 // controllers/songController.js
-const Song = require("../models/Song");
-const User = require("../models/User");
-const mm   = require("music-metadata");
-const path = require("path");
+const Song                = require("../models/Song");
+const User                = require("../models/User");
+const mm                  = require("music-metadata");
+const path                = require("path");
+const notificationService = require("../services/notificationService");
+const PlayHistory         = require("../models/PlayHistory")
 
 /* ═══════════════════════════════════════════
    HELPER: Đọc duration từ file audio
@@ -27,8 +29,11 @@ const getSongs = async (req, res, next) => {
     const limit = parseInt(req.query.limit) || 20;
     const skip  = (page - 1) * limit;
 
-    // ✅ Chỉ lấy bài approved
-    let query = { status: "approved" };
+    // ✅ $ne: true → match cả doc cũ (undefined) lẫn false
+    let query = {
+      status:    "approved",
+      isDeleted: { $ne: true },
+    };
 
     if (req.query.search) {
       query.$or = [
@@ -42,8 +47,8 @@ const getSongs = async (req, res, next) => {
 
     let sortOption = { createdAt: -1 };
     if (req.query.sort === "popular") sortOption = { playCount: -1 };
-    else if (req.query.sort === "likes")  sortOption = { likeCount: -1 };
-    else if (req.query.sort === "title")  sortOption = { title: 1 };
+    else if (req.query.sort === "likes") sortOption = { likeCount: -1 };
+    else if (req.query.sort === "title") sortOption = { title: 1 };
 
     const total = await Song.countDocuments(query);
     const songs = await Song.find(query)
@@ -71,8 +76,9 @@ const getSongs = async (req, res, next) => {
 const getSong = async (req, res, next) => {
   try {
     const song = await Song.findOne({
-      _id: req.params.id,
-      status: "approved",   // ✅ chỉ trả approved
+      _id:       req.params.id,
+      status:    "approved",
+      isDeleted: { $ne: true }, // ✅
     }).populate("uploadedBy", "username avatar");
 
     if (!song) {
@@ -127,11 +133,29 @@ const createSong = async (req, res, next) => {
       coverImage,
       videoFile,
       uploadedBy: req.user._id,
-      status:     "pending", // ✅ Luôn chờ duyệt
+      status:     "pending",
     });
 
     const populatedSong = await Song.findById(song._id)
       .populate("uploadedBy", "username avatar");
+
+    try {
+      await notificationService.notifyAllAdmins({
+        sender:  req.user._id,
+        type:    "new_upload",
+        title:   "🎵 Bài hát mới chờ duyệt",
+        message: `${req.user.username} vừa upload "${title}" (${genre}) - cần phê duyệt`,
+        data: {
+          songId:     song._id,
+          songTitle:  title,
+          artist,
+          coverImage,
+        },
+      });
+      console.log(`🔔 Đã gửi thông báo upload tới admin: "${title}"`);
+    } catch (notifErr) {
+      console.error("⚠️ Lỗi gửi notification:", notifErr.message);
+    }
 
     res.status(201).json({
       success: true,
@@ -145,13 +169,17 @@ const createSong = async (req, res, next) => {
 
 /* ═══════════════════════════════════════════
    USER: Lấy lịch sử upload của mình
+   ✅ $ne: true → không mất dữ liệu cũ
 ═══════════════════════════════════════════ */
 const getMySongs = async (req, res, next) => {
   try {
-    const songs = await Song.find({ uploadedBy: req.user._id })
+    const songs = await Song.find({
+      uploadedBy : req.user._id,
+      isDeleted  : { $ne: true }, // ✅ match undefined + false, bỏ qua true
+    })
       .sort({ createdAt: -1 })
-      .populate("uploadedBy",  "username avatar")
-      .populate("reviewedBy", "username")  // ✅ Biết ai đã duyệt
+      .populate("uploadedBy", "username avatar")
+      .populate("reviewedBy", "username")
       .select("-__v");
 
     res.status(200).json({
@@ -172,7 +200,7 @@ const getAllUploadsAdmin = async (req, res, next) => {
     const { status, page = 1, limit = 20 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Filter theo status nếu có
+    // ✅ Admin thấy tất cả kể cả đã xóa mềm
     const filter = {};
     if (status && status !== "all") filter.status = status;
 
@@ -184,14 +212,8 @@ const getAllUploadsAdmin = async (req, res, next) => {
       .skip(skip)
       .limit(parseInt(limit));
 
-    // ✅ Thống kê nhanh
     const stats = await Song.aggregate([
-      {
-        $group: {
-          _id:   "$status",
-          count: { $sum: 1 },
-        },
-      },
+      { $group: { _id: "$status", count: { $sum: 1 } } },
     ]);
 
     const statsMap = { pending: 0, approved: 0, rejected: 0 };
@@ -203,7 +225,7 @@ const getAllUploadsAdmin = async (req, res, next) => {
       total,
       totalPages: Math.ceil(total / parseInt(limit)),
       currentPage: parseInt(page),
-      stats: statsMap,   // ✅ { pending: N, approved: N, rejected: N }
+      stats: statsMap,
       data: songs,
     });
   } catch (error) {
@@ -222,7 +244,7 @@ const approveSong = async (req, res, next) => {
         status:       "approved",
         reviewedBy:   req.user._id,
         reviewedAt:   new Date(),
-        rejectReason: "",          // Xoá lý do từ chối nếu trước đó bị reject
+        rejectReason: "",
       },
       { new: true }
     )
@@ -237,6 +259,25 @@ const approveSong = async (req, res, next) => {
     }
 
     console.log(`✅ Admin ${req.user.username} đã duyệt: "${song.title}"`);
+
+    try {
+      await notificationService.create({
+        recipient: song.uploadedBy._id,
+        sender:    req.user._id,
+        type:      "song_approved",
+        title:     "✅ Bài hát đã được duyệt!",
+        message:   `Bài hát "${song.title}" của bạn đã được phê duyệt và công khai trên MusicVN 🎉`,
+        data: {
+          songId:     song._id,
+          songTitle:  song.title,
+          artist:     song.artist,
+          coverImage: song.coverImage,
+        },
+      });
+      console.log(`🔔 Đã thông báo duyệt tới user: ${song.uploadedBy.username}`);
+    } catch (notifErr) {
+      console.error("⚠️ Lỗi gửi notification approve:", notifErr.message);
+    }
 
     res.status(200).json({
       success: true,
@@ -253,7 +294,8 @@ const approveSong = async (req, res, next) => {
 ═══════════════════════════════════════════ */
 const rejectSong = async (req, res, next) => {
   try {
-    const { reason } = req.body;
+    const { reason }   = req.body;
+    const rejectReason = reason || "Không đáp ứng tiêu chuẩn";
 
     const song = await Song.findByIdAndUpdate(
       req.params.id,
@@ -261,7 +303,7 @@ const rejectSong = async (req, res, next) => {
         status:       "rejected",
         reviewedBy:   req.user._id,
         reviewedAt:   new Date(),
-        rejectReason: reason || "Không đáp ứng tiêu chuẩn",
+        rejectReason,
       },
       { new: true }
     )
@@ -276,6 +318,26 @@ const rejectSong = async (req, res, next) => {
     }
 
     console.log(`❌ Admin ${req.user.username} đã từ chối: "${song.title}"`);
+
+    try {
+      await notificationService.create({
+        recipient: song.uploadedBy._id,
+        sender:    req.user._id,
+        type:      "song_rejected",
+        title:     "❌ Bài hát bị từ chối",
+        message:   `Bài hát "${song.title}" của bạn chưa được phê duyệt.`,
+        data: {
+          songId:       song._id,
+          songTitle:    song.title,
+          artist:       song.artist,
+          coverImage:   song.coverImage,
+          rejectReason,
+        },
+      });
+      console.log(`🔔 Đã thông báo từ chối tới user: ${song.uploadedBy.username}`);
+    } catch (notifErr) {
+      console.error("⚠️ Lỗi gửi notification reject:", notifErr.message);
+    }
 
     res.status(200).json({
       success: true,
@@ -316,10 +378,10 @@ const updateSong = async (req, res, next) => {
     }
 
     const updateData = {};
-    if (req.body.title)              updateData.title  = req.body.title;
-    if (req.body.artist)             updateData.artist = req.body.artist;
-    if (req.body.album)              updateData.album  = req.body.album;
-    if (req.body.genre)              updateData.genre  = req.body.genre;
+    if (req.body.title)                updateData.title  = req.body.title;
+    if (req.body.artist)               updateData.artist = req.body.artist;
+    if (req.body.album)                updateData.album  = req.body.album;
+    if (req.body.genre)                updateData.genre  = req.body.genre;
     if (req.body.lyrics !== undefined) updateData.lyrics = req.body.lyrics;
 
     if (req.files?.cover?.[0]) updateData.coverImage = req.files.cover[0].filename;
@@ -329,12 +391,28 @@ const updateSong = async (req, res, next) => {
       updateData.audioFile = req.files.audio[0].filename;
       updateData.duration  = await getAudioDuration(updateData.audioFile);
 
-      // ✅ User sửa file nhạc → về pending lại
       if (req.user.role !== "admin") {
         updateData.status       = "pending";
         updateData.reviewedBy   = null;
         updateData.reviewedAt   = null;
         updateData.rejectReason = "";
+
+        try {
+          await notificationService.notifyAllAdmins({
+            sender:  req.user._id,
+            type:    "new_upload",
+            title:   "🔄 Bài hát được cập nhật - chờ duyệt lại",
+            message: `${req.user.username} đã cập nhật file nhạc "${song.title}" - cần duyệt lại`,
+            data: {
+              songId:     song._id,
+              songTitle:  song.title,
+              artist:     song.artist,
+              coverImage: song.coverImage,
+            },
+          });
+        } catch (notifErr) {
+          console.error("⚠️ Lỗi gửi notification update:", notifErr.message);
+        }
       }
     }
 
@@ -354,7 +432,7 @@ const updateSong = async (req, res, next) => {
 };
 
 /* ═══════════════════════════════════════════
-   USER/ADMIN: Xoá bài hát
+   USER/ADMIN: Xoá bài hát (hard delete)
 ═══════════════════════════════════════════ */
 const deleteSong = async (req, res, next) => {
   try {
@@ -401,12 +479,27 @@ const playSong = async (req, res, next) => {
       { $inc: { playCount: 1 } },
       { new: true }
     );
+
     if (!song) {
       return res.status(404).json({
         success: false,
         message: "Không tìm thấy bài hát",
       });
     }
+
+    // ✅ Lưu PlayHistory - tách try/catch riêng
+    // để lỗi history không ảnh hưởng response chính
+    try {
+      await PlayHistory.create({
+        song:     req.params.id,
+        user:     req.user?._id || null,
+        playedAt: new Date(),
+      });
+      console.log(`🎵 Ghi lượt nghe: "${song.title}" | user: ${req.user?._id || "anonymous"}`);
+    } catch (historyErr) {
+      console.error("⚠️ Lỗi lưu PlayHistory:", historyErr.message);
+    }
+
     res.status(200).json({
       success: true,
       data: { playCount: song.playCount },
@@ -436,17 +529,19 @@ const likeSong = async (req, res, next) => {
     const isLiked = user.favorites.includes(songId);
 
     if (isLiked) {
-      await User.findByIdAndUpdate(userId, { $pull:    { favorites: songId } });
-      await Song.findByIdAndUpdate(songId, { $inc:     { likeCount: -1 } });
+      await User.findByIdAndUpdate(userId, { $pull:     { favorites: songId } });
+      await Song.findByIdAndUpdate(songId, { $inc:      { likeCount: -1 } });
       res.status(200).json({
-        success: true, message: "Đã bỏ thích",
+        success: true,
+        message: "Đã bỏ thích",
         data: { isLiked: false },
       });
     } else {
       await User.findByIdAndUpdate(userId, { $addToSet: { favorites: songId } });
       await Song.findByIdAndUpdate(songId, { $inc:      { likeCount: 1 } });
       res.status(200).json({
-        success: true, message: "Đã thích bài hát",
+        success: true,
+        message: "Đã thích bài hát",
         data: { isLiked: true },
       });
     }
@@ -461,7 +556,10 @@ const likeSong = async (req, res, next) => {
 const getTopSongs = async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
-    const songs = await Song.find({ status: "approved" }) // ✅ chỉ approved
+    const songs = await Song.find({
+      status:    "approved",
+      isDeleted: { $ne: true }, // ✅
+    })
       .populate("uploadedBy", "username avatar")
       .sort({ playCount: -1 })
       .limit(limit);
@@ -486,7 +584,7 @@ module.exports = {
   likeSong,
   getTopSongs,
   getMySongs,
-  getAllUploadsAdmin, // ✅ mới
-  approveSong,       // ✅ mới
-  rejectSong,        // ✅ mới
+  getAllUploadsAdmin,
+  approveSong,
+  rejectSong,
 };

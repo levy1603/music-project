@@ -10,6 +10,7 @@ import SearchBar from "../SearchBar";
 import NotificationBell from "./NotificationBell"; // 👈 THÊM
 import "../Header.css";
 import getAvatarURL from "../../utils/getAvatarURL";
+import logoImg from "../../assets/barbara-genshin-impact.gif"; // ✅ THÊM LOGO
 
 const Header = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -46,21 +47,37 @@ const Header = () => {
     navigate(path);
   };
 
-  return (
+return (
     <header className="header">
-      <Link to="/" className="header-logo">
-        <FaMusic className="logo-icon" />
-        <h1>MusicVN</h1>
-      </Link>
 
-      <SearchBar />
+      {/* ===== BÊN TRÁI: Logo + SearchBar ===== */}
+      <div className="header-left">
+        <Link to="/" className="header-logo">
 
+          {/* ✅ Dùng ảnh thay vì FaMusic */}
+          <div className="logo-icon-wrapper">
+            <img
+              src={logoImg}
+              alt="ChillWithF Logo"
+              className="logo-icon"
+            />
+            <span className="logo-wave-3" />
+            <span className="logo-wave-4" />
+            <span className="logo-wave-5" />
+            <span className="logo-wave-6" />
+            <span className="logo-wave-7" />
+          </div>
+
+          <h1>ChillWithF</h1>
+        </Link>
+        <SearchBar />
+      </div>
+
+      {/* ===== BÊN PHẢI: giữ nguyên ===== */}
       <div className="header-user">
         {isAuthenticated ? (
           <>
-            {/* 🔔 NOTIFICATION BELL - hiện khi đã đăng nhập */}
             <NotificationBell />
-
             <div className="user-menu-wrapper" ref={menuRef}>
               <button
                 className={`user-trigger ${showMenu ? "active" : ""}`}
@@ -103,8 +120,9 @@ const Header = () => {
           </Link>
         )}
       </div>
-    </header>
-  );
+
+  </header>
+);
 };
 
 export default Header;

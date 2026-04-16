@@ -8,6 +8,9 @@
   z-index: 200;
   width: fit-content;
   max-width: calc(100vw - 40px);
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
 }
 
 /* ===== COMPACT PLAYER ===== */
@@ -43,12 +46,12 @@
   border-bottom: 0px solid rgba(255, 255, 255, 0);
   transition:
     max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 0.35s ease,
-    border 0.35s ease;
+    opacity    0.35s ease,
+    border     0.35s ease;
 }
 
 .player-expanded-area.is-expanded {
-  max-height: 400px;
+  max-height: 600px;
   opacity: 1;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -100,6 +103,10 @@
   color: #888;
   font-size: 0.82rem;
   margin: 0;
+}
+
+.player-expanded-info.clickable:hover h3 {
+  color: #1db954;
 }
 
 /* ===== PROGRESS LỚN ===== */
@@ -158,32 +165,136 @@
   gap: 20px;
 }
 
-/* ===== VOLUME LỚN ===== */
-.player-volume-large {
+.ctrl-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 5px;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.ctrl-btn:hover  { color: #fff; transform: scale(1.1); }
+.ctrl-btn.active { color: #1db954; }
+
+.play-btn-large {
+  width: 44px;
+  height: 44px;
+  background: #fff;
+  color: #000 !important;
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  width: 100%;
   justify-content: center;
+  font-size: 1rem;
 }
 
-.volume-slider-large {
-  -webkit-appearance: none;
-  width: 130px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 2px;
-  outline: none;
-  cursor: pointer;
+.play-btn-large:hover {
+  background: #1db954;
+  color: #fff !important;
+  transform: scale(1.1);
 }
 
-.volume-slider-large::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
-  background: #fff;
-  border-radius: 50%;
-  cursor: pointer;
+/* ===== HÀNG DƯỚI EXPANDED: Queue + Timer ===== */
+.player-expanded-bottom {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             16px;
+  margin-top:      4px;
+  width:           100%;
+}
+
+/* Style chung cho cả 2 nút icon */
+.queue-icon-btn,
+.timer-icon-btn {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  width:           36px;
+  height:          36px;
+  border-radius:   50%;
+  border:          1px solid rgba(255, 255, 255, 0.1);
+  background:      rgba(255, 255, 255, 0.06);
+  color:           #888;
+  font-size:       0.88rem;
+  cursor:          pointer;
+  transition:      all 0.2s ease;
+  position:        relative;
+  flex-shrink:     0;
+}
+
+.queue-icon-btn:hover,
+.timer-icon-btn:hover {
+  background:   rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  color:        #fff;
+  transform:    scale(1.08);
+}
+
+/* Queue active */
+.queue-icon-btn.active {
+  background:   rgba(29, 185, 84, 0.2);
+  border-color: rgba(29, 185, 84, 0.4);
+  color:        #1db954;
+}
+
+/* Timer active */
+.timer-icon-btn.timer-active {
+  background:   rgba(29, 185, 84, 0.2);
+  border-color: rgba(29, 185, 84, 0.4);
+  color:        #1db954;
+  animation:    timer-pulse 2s ease-in-out infinite;
+}
+
+/* Timer open */
+.timer-icon-btn.timer-open {
+  background:   rgba(29, 185, 84, 0.3);
+  border-color: #1db954;
+  color:        #1db954;
+}
+
+/* Badge thời gian trên icon timer */
+.timer-icon-btn .timer-badge {
+  position:       absolute;
+  top:            -8px;
+  right:          -12px;
+  background:     #1db954;
+  color:          #fff;
+  font-size:      0.55rem;
+  font-weight:    700;
+  padding:        2px 5px;
+  border-radius:  8px;
+  white-space:    nowrap;
+  line-height:    1.3;
+  pointer-events: none;
+  border:         1px solid rgba(20, 20, 40, 0.8);
+}
+
+/* ===== SLEEP TIMER INLINE ===== */
+.sleep-timer-inline {
+  width:      100%;
+  margin-top: 4px;
+  animation:  slideUpTimer 0.25s ease;
+}
+
+@keyframes slideUpTimer {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+.sleep-timer-inline .sleep-timer-panel {
+  position:      relative;
+  bottom:        unset;
+  right:         unset;
+  width:         100%;
+  box-shadow:    none;
+  margin-top:    0;
+  border-radius: 14px;
+  background:    rgba(255, 255, 255, 0.03);
+  border:        1px solid rgba(255, 255, 255, 0.07);
 }
 
 /* ===== THANH BAR CHÍNH ===== */
@@ -237,12 +348,12 @@
   animation: barBounce 0.6s ease-in-out infinite alternate;
 }
 
-.cover-playing-indicator span:nth-child(1) { height: 6px;  animation-delay: 0s; }
+.cover-playing-indicator span:nth-child(1) { height: 6px;  animation-delay: 0s;   }
 .cover-playing-indicator span:nth-child(2) { height: 10px; animation-delay: 0.2s; }
 .cover-playing-indicator span:nth-child(3) { height: 7px;  animation-delay: 0.4s; }
 
 @keyframes barBounce {
-  from { height: 4px; }
+  from { height: 4px;  }
   to   { height: 12px; }
 }
 
@@ -270,6 +381,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.player-song-text.clickable:hover .player-song-name   { color: #1db954; text-decoration: underline; }
+.player-song-text.clickable:hover .player-song-artist { color: #aaa; }
 
 .fav-btn-player {
   background: none;
@@ -314,7 +428,7 @@
   position: relative;
 }
 
-.ctrl-btn-sm:hover { color: #fff; transform: scale(1.1); }
+.ctrl-btn-sm:hover  { color: #fff; transform: scale(1.1); }
 .ctrl-btn-sm.active { color: #1db954; }
 
 .ctrl-btn-sm.play-btn {
@@ -396,16 +510,17 @@
 
 .progress-bar:hover .progress-thumb { opacity: 1; }
 
-/* ===== RIGHT - CHỈ CÒN NÚT EXPAND ===== */
+/* ===== RIGHT ===== */
 .player-right {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  width: 36px;
+  display:         flex;
+  align-items:     center;
   justify-content: flex-end;
+  gap:             6px;
+  flex-shrink:     0;
+  min-width:       36px;
 }
 
-/* ✅ Ẩn hoàn toàn volume */
+/* ✅ Ẩn volume */
 .volume-control { display: none; }
 .volume-slider  { display: none; }
 
@@ -426,9 +541,9 @@
 }
 
 .expand-btn:hover {
-  background: rgba(29, 185, 84, 0.2);
+  background:   rgba(29, 185, 84, 0.2);
   border-color: #1db954;
-  color: #1db954;
+  color:        #1db954;
 }
 
 .expand-btn svg {
@@ -439,50 +554,31 @@
   transform: rotate(180deg);
 }
 
-/* ===== BUTTONS TRONG EXPANDED ===== */
-.ctrl-btn {
-  background: none;
-  border: none;
-  color: #aaa;
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 5px;
-  transition: all 0.3s;
-  position: relative;
+/* ===== BADGE COMPACT KHI CHƯA EXPAND ===== */
+.timer-compact-badge {
+  display:       flex;
+  align-items:   center;
+  gap:           4px;
+  padding:       3px 8px;
+  background:    rgba(29, 185, 84, 0.2);
+  border:        1px solid rgba(29, 185, 84, 0.35);
+  color:         #1db954;
+  border-radius: 12px;
+  font-size:     0.68rem;
+  font-weight:   700;
+  cursor:        pointer;
+  animation:     timer-pulse 2s ease-in-out infinite;
+  transition:    all 0.2s;
+  white-space:   nowrap;
 }
 
-.ctrl-btn:hover { color: #fff; transform: scale(1.1); }
-.ctrl-btn.active { color: #1db954; }
-
-.play-btn-large {
-  width: 44px;
-  height: 44px;
-  background: #fff;
-  color: #000 !important;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-}
-
-.play-btn-large:hover {
-  background: #1db954;
-  color: #fff !important;
-  transform: scale(1.1);
+.timer-compact-badge:hover {
+  background: rgba(29, 185, 84, 0.3);
+  transform:  scale(1.05);
 }
 
 /* ===== CLICKABLE ===== */
 .clickable { cursor: pointer; }
-
-.player-song-text.clickable:hover .player-song-name {
-  color: #1db954;
-  text-decoration: underline;
-}
-
-.player-song-text.clickable:hover .player-song-artist {
-  color: #aaa;
-}
 
 /* ===== OVERLAY NHỎ ===== */
 .cover-detail-overlay-small {
@@ -498,9 +594,7 @@
   font-size: 0.9rem;
 }
 
-.player-cover-small:hover .cover-detail-overlay-small {
-  opacity: 1;
-}
+.player-cover-small:hover .cover-detail-overlay-small { opacity: 1; }
 
 /* ===== OVERLAY LỚN ===== */
 .cover-detail-overlay {
@@ -519,54 +613,9 @@
   letter-spacing: 0.5px;
 }
 
-.player-cover-large:hover .cover-detail-overlay {
-  opacity: 1;
-}
+.player-cover-large:hover .cover-detail-overlay { opacity: 1; }
 
-.player-expanded-info.clickable:hover h3 {
-  color: #1db954;
-}
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 768px) {
-  .player-wrapper {
-    left: 10px;
-    right: 10px;
-    max-width: calc(100vw - 20px);
-  }
-
-  .player-compact {
-    min-width: 100%;
-    max-width: 100%;
-    border-radius: 16px;
-  }
-
-  .player-song-info { width: 120px; }
-  .player-bar { padding: 10px 12px; }
-}
-
-@media (max-width: 480px) {
-  .player-wrapper { bottom: 10px; }
-  .player-song-info { width: 100px; }
-  .player-buttons { gap: 8px; }
-  .ctrl-btn-sm { font-size: 0.78rem; }
-  .ctrl-btn-sm.play-btn { width: 30px; height: 30px; }
-}
-
-/* ===== WRAPPER - cần relative để queue panel absolute ===== */
-.player-wrapper {
-  position: fixed;
-  bottom: 20px;
-  left: 20px;
-  z-index: 200;
-  width: fit-content;
-  max-width: calc(100vw - 40px);
-  display: flex;          /* ✅ flex để queue nằm bên phải */
-  align-items: flex-end;  /* ✅ căn dưới cùng */
-  gap: 12px;
-}
-
-/* ===== QUEUE PANEL - nằm bên phải player ===== */
+/* ===== QUEUE PANEL ===== */
 .queue-panel {
   width: 280px;
   max-height: 420px;
@@ -582,14 +631,8 @@
 }
 
 @keyframes queueSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);    }
 }
 
 /* ===== QUEUE HEADER ===== */
@@ -625,9 +668,9 @@
 }
 
 .queue-refresh-btn:hover {
-  background: rgba(29, 185, 84, 0.2);
+  background:   rgba(29, 185, 84, 0.2);
   border-color: #1db954;
-  color: #1db954;
+  color:        #1db954;
 }
 
 /* ===== QUEUE LIST ===== */
@@ -637,10 +680,10 @@
   padding: 8px 0;
 }
 
-.queue-list::-webkit-scrollbar { width: 4px; }
+.queue-list::-webkit-scrollbar       { width: 4px; }
 .queue-list::-webkit-scrollbar-track { background: transparent; }
 .queue-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background:    rgba(255, 255, 255, 0.1);
   border-radius: 2px;
 }
 .queue-list::-webkit-scrollbar-thumb:hover {
@@ -657,13 +700,8 @@
   transition: background 0.2s;
 }
 
-.queue-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.queue-item.active {
-  background: rgba(29, 185, 84, 0.08);
-}
+.queue-item:hover  { background: rgba(255, 255, 255, 0.06); }
+.queue-item.active { background: rgba(29, 185, 84, 0.08);   }
 
 /* Index */
 .queue-index {
@@ -689,7 +727,7 @@
   animation: barBounce 0.6s ease-in-out infinite alternate;
 }
 
-.queue-playing-bars span:nth-child(1) { animation-delay: 0s; }
+.queue-playing-bars span:nth-child(1) { animation-delay: 0s;   }
 .queue-playing-bars span:nth-child(2) { animation-delay: 0.2s; }
 .queue-playing-bars span:nth-child(3) { animation-delay: 0.4s; }
 
@@ -745,30 +783,65 @@
 .queue-fav-btn:hover { color: #fff; transform: scale(1.2); }
 .queue-fav-btn.liked { color: #1db954; }
 
-/* ===== ICON DANH SÁCH TRONG EXPANDED ===== */
-.queue-icon-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 50%;
-  color: #888;
-  cursor: pointer;
-  font-size: 0.82rem;
-  transition: all 0.3s;
+/* ===== ANIMATIONS ===== */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-.queue-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+@keyframes timer-pulse {
+  0%, 100% { opacity: 1;   }
+  50%       { opacity: 0.6; }
 }
 
-.queue-icon-btn.active {
-  background: rgba(29, 185, 84, 0.2);
-  border-color: rgba(29, 185, 84, 0.4);
-  color: #1db954;
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .player-wrapper {
+    left:      10px;
+    right:     10px;
+    max-width: calc(100vw - 20px);
+  }
+
+  .player-compact {
+    min-width: 100%;
+    max-width: 100%;
+    border-radius: 16px;
+  }
+
+  .player-song-info { width: 120px; }
+  .player-bar       { padding: 10px 12px; }
+  .queue-panel      { display: none; }
 }
 
+@media (max-width: 480px) {
+  .player-wrapper    { bottom: 10px; }
+  .player-song-info  { width: 100px; }
+  .player-buttons    { gap: 8px; }
+  .ctrl-btn-sm       { font-size: 0.78rem; }
+  .ctrl-btn-sm.play-btn { width: 30px; height: 30px; }
+}
+
+/* ===== TIMER PANEL - bên phải player, giống queue panel ===== */
+/* ===== TIMER PANEL ===== */
+.timer-panel {
+  width:           300px;
+  background:      rgba(20, 20, 40, 0.55); /* ✅ Trong suốt vừa */
+  backdrop-filter: blur(28px) saturate(180%);
+  border:          1px solid rgba(255, 255, 255, 0.15);
+  border-radius:   16px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  overflow:  hidden;
+  animation: queueSlideIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ✅ Reset hoàn toàn SleepTimerPanel bên trong */
+.timer-panel .sleep-timer-panel {
+  all:           unset !important; /* Reset tất cả style */
+  display:       block !important;
+  width:         100% !important;
+  padding:       16px !important;
+  box-sizing:    border-box !important;
+}
+.sleep-timer-inline { display: none; }

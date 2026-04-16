@@ -1,37 +1,26 @@
 // src/components/admin/AdminUploads.js
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react"; // 👈 thêm useRef
 import {
   FaCloudUploadAlt, FaMusic, FaCheckCircle,
   FaTimesCircle, FaTrash, FaSearch, FaFilter,
   FaEye, FaClock, FaUser, FaSpinner, FaSync,
-  FaExclamationTriangle, FaVideo,
+  FaExclamationTriangle, FaVideo, FaBell,    // 👈 thêm FaBell
 } from "react-icons/fa";
 import songAPI from "../../api/songAPI";
 import "./AdminUploads.css";
 
-/* ═══════════════════════════════════════
-   CONSTANTS
-═══════════════════════════════════════ */
+/* ── Constants & Helpers giữ nguyên ── */
 const STATUS_CONFIG = {
   pending:  { label: "Chờ duyệt", className: "badge-pending",  icon: <FaClock /> },
   approved: { label: "Đã duyệt",  className: "badge-approved", icon: <FaCheckCircle /> },
   rejected: { label: "Từ chối",   className: "badge-rejected", icon: <FaTimesCircle /> },
 };
 
-/* ═══════════════════════════════════════
-   HELPERS
-═══════════════════════════════════════ */
 const formatDuration = (seconds) => {
   if (!seconds) return "--:--";
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
-};
-
-const formatFileSize = (bytes) => {
-  if (!bytes) return "N/A";
-  if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MB`;
-  return `${(bytes / 1024).toFixed(0)} KB`;
 };
 
 const formatDate = (iso) => {
@@ -59,23 +48,29 @@ const getVideoURL = (song) => {
   if (song.videoFile.startsWith("http")) return song.videoFile;
   return `http://localhost:5000/uploads/videos/${song.videoFile}`;
 };
+
 /* ═══════════════════════════════════════
    MAIN COMPONENT
 ═══════════════════════════════════════ */
-const AdminUploads = () => {
-  /* ── State ── */
-  const [uploads, setUploads]           = useState([]);
-  const [loading, setLoading]           = useState(true);
-  const [error, setError]               = useState("");
-  const [searchTerm, setSearchTerm]     = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [selected, setSelected]         = useState(null);
+const AdminUploads = ({
+  highlightSongId,   // 👈 THÊM
+  onClearHighlight,  // 👈 THÊM
+}) => {
+  const [uploads,       setUploads]       = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [error,         setError]         = useState("");
+  const [searchTerm,    setSearchTerm]    = useState("");
+  const [filterStatus,  setFilterStatus]  = useState("all");
+  const [selected,      setSelected]      = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
-  const [rejectModal, setRejectModal]   = useState(null); // { id, title }
-  const [rejectReason, setRejectReason] = useState("");
-  const [stats, setStats]               = useState({
+  const [rejectModal,   setRejectModal]   = useState(null);
+  const [rejectReason,  setRejectReason]  = useState("");
+  const [stats,         setStats]         = useState({
     total: 0, pending: 0, approved: 0, rejected: 0,
   });
+
+  // 👈 Ref để scroll tới bài được highlight
+  const highlightRowRef = useRef(null);
 
   /* ── Fetch data ── */
   const fetchUploads = useCallback(async () => {
@@ -84,7 +79,6 @@ const AdminUploads = () => {
     try {
       const params = filterStatus !== "all" ? { status: filterStatus } : {};
       const res    = await songAPI.adminGetAllUploads(params);
-
       const data      = res.data?.data  || res.data || [];
       const statsData = res.data?.stats || {};
 
@@ -103,9 +97,33 @@ const AdminUploads = () => {
     }
   }, [filterStatus]);
 
+  useEffect(() => { fetchUploads(); }, [fetchUploads]);
+
+  /* ════════════════════════════════════════
+     👈 Auto scroll + filter khi có highlight
+  ════════════════════════════════════════ */
   useEffect(() => {
-    fetchUploads();
-  }, [fetchUploads]);
+    if (!highlightSongId || loading) return;
+
+    // Nếu đang filter không phải "all" hoặc "pending"
+    // → reset về "all" để bài highlight hiện ra
+    const targetSong = uploads.find((u) => u._id === highlightSongId);
+    if (targetSong && filterStatus !== "all" && filterStatus !== targetSong.status) {
+      setFilterStatus("all");
+    }
+
+    // Scroll sau khi render
+    const timer = setTimeout(() => {
+      if (highlightRowRef.current) {
+        highlightRowRef.current.scrollIntoView({
+          behavior: "smooth",
+          block:    "center",
+        });
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [highlightSongId, loading, uploads, filterStatus]);
 
   /* ── Client-side search ── */
   const filtered = uploads.filter((u) => {
@@ -122,9 +140,8 @@ const AdminUploads = () => {
   const handleApprove = useCallback(async (id) => {
     setActionLoading(id);
     try {
-      const res = await songAPI.adminApproveSong(id);
+      const res     = await songAPI.adminApproveSong(id);
       const updated = res.data?.data || res.data;
-
       setUploads((prev) =>
         prev.map((u) => (u._id === id ? { ...u, ...updated } : u))
       );
@@ -133,15 +150,15 @@ const AdminUploads = () => {
         approved: prev.approved + 1,
         pending:  Math.max(0, prev.pending - 1),
       }));
-      if (selected?._id === id) {
-        setSelected((s) => ({ ...s, ...updated }));
-      }
+      if (selected?._id === id) setSelected((s) => ({ ...s, ...updated }));
+      // Clear highlight sau khi duyệt
+      if (id === highlightSongId) onClearHighlight?.();
     } catch (err) {
-      alert(err.response?.data?.message || "Duyệt thất bại! Vui lòng thử lại.");
+      alert(err.response?.data?.message || "Duyệt thất bại!");
     } finally {
       setActionLoading(null);
     }
-  }, [selected]);
+  }, [selected, highlightSongId, onClearHighlight]);
 
   const openRejectModal = (upload) => {
     setRejectModal({ id: upload._id, title: upload.title });
@@ -151,13 +168,11 @@ const AdminUploads = () => {
   const handleRejectConfirm = async () => {
     if (!rejectModal) return;
     const { id } = rejectModal;
-
     setActionLoading(id);
     setRejectModal(null);
     try {
-      const res = await songAPI.adminRejectSong(id, rejectReason);
+      const res     = await songAPI.adminRejectSong(id, rejectReason);
       const updated = res.data?.data || res.data;
-
       setUploads((prev) =>
         prev.map((u) => (u._id === id ? { ...u, ...updated } : u))
       );
@@ -166,11 +181,11 @@ const AdminUploads = () => {
         rejected: prev.rejected + 1,
         pending:  Math.max(0, prev.pending - 1),
       }));
-      if (selected?._id === id) {
-        setSelected((s) => ({ ...s, ...updated }));
-      }
+      if (selected?._id === id) setSelected((s) => ({ ...s, ...updated }));
+      // Clear highlight sau khi từ chối
+      if (id === highlightSongId) onClearHighlight?.();
     } catch (err) {
-      alert(err.response?.data?.message || "Từ chối thất bại! Vui lòng thử lại.");
+      alert(err.response?.data?.message || "Từ chối thất bại!");
     } finally {
       setActionLoading(null);
       setRejectReason("");
@@ -178,7 +193,7 @@ const AdminUploads = () => {
   };
 
   const handleDelete = useCallback(async (id) => {
-    if (!window.confirm("Bạn chắc chắn muốn xoá upload này? Hành động không thể hoàn tác!")) return;
+    if (!window.confirm("Bạn chắc chắn muốn xoá upload này?")) return;
     setActionLoading(id);
     try {
       await songAPI.adminDeleteSong(id);
@@ -187,21 +202,20 @@ const AdminUploads = () => {
         const song = uploads.find((u) => u._id === id);
         return {
           ...prev,
-          total:    Math.max(0, prev.total - 1),
+          total: Math.max(0, prev.total - 1),
           [song?.status]: Math.max(0, prev[song?.status] - 1),
         };
       });
-      if (selected?._id === id) setSelected(null);
+      if (selected?._id   === id) setSelected(null);
+      if (highlightSongId === id) onClearHighlight?.();
     } catch (err) {
-      alert(err.response?.data?.message || "Xoá thất bại! Vui lòng thử lại.");
+      alert(err.response?.data?.message || "Xoá thất bại!");
     } finally {
       setActionLoading(null);
     }
-  }, [selected, uploads]);
+  }, [selected, uploads, highlightSongId, onClearHighlight]);
 
-  /* ══════════════════════════════════════
-     RENDER: Loading
-  ══════════════════════════════════════ */
+  /* ── Loading / Error ── */
   if (loading) {
     return (
       <div className="au-loading">
@@ -211,9 +225,6 @@ const AdminUploads = () => {
     );
   }
 
-  /* ══════════════════════════════════════
-     RENDER: Error
-  ══════════════════════════════════════ */
   if (error) {
     return (
       <div className="au-error-state">
@@ -227,7 +238,7 @@ const AdminUploads = () => {
   }
 
   /* ══════════════════════════════════════
-     RENDER: Main
+     RENDER MAIN
   ══════════════════════════════════════ */
   return (
     <div className="au-wrapper">
@@ -238,47 +249,42 @@ const AdminUploads = () => {
           <FaCloudUploadAlt className="au-header-icon" />
           <div>
             <h1 className="au-title">Quản lý Upload</h1>
-            <p className="au-subtitle">
-              Duyệt và quản lý các bài hát được tải lên
-            </p>
+            <p className="au-subtitle">Duyệt và quản lý các bài hát được tải lên</p>
           </div>
         </div>
-        <button
-          className="au-refresh-btn"
-          onClick={fetchUploads}
-          title="Làm mới"
-        >
+        <button className="au-refresh-btn" onClick={fetchUploads} title="Làm mới">
           <FaSync /> Làm mới
         </button>
       </div>
 
+      {/* ════════════════════════════════════
+          👈 BANNER HIGHLIGHT từ notification
+      ════════════════════════════════════ */}
+      {highlightSongId && (
+        <div className="au-highlight-banner">
+          <div className="au-highlight-banner-left">
+            <FaBell className="au-highlight-bell" />
+            <span>
+              Bạn đang xem bài hát từ thông báo —
+              <strong> cuộn xuống để tìm bài được đánh dấu</strong>
+            </span>
+          </div>
+          <button
+            className="au-highlight-banner-close"
+            onClick={onClearHighlight}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* ── STATS CARDS ── */}
       <div className="au-stats-grid">
         {[
-          {
-            label: "Tổng upload",
-            value: stats.pending + stats.approved + stats.rejected,
-            color: "blue",
-            icon:  <FaCloudUploadAlt />,
-          },
-          {
-            label: "Chờ duyệt",
-            value: stats.pending,
-            color: "yellow",
-            icon:  <FaClock />,
-          },
-          {
-            label: "Đã duyệt",
-            value: stats.approved,
-            color: "green",
-            icon:  <FaCheckCircle />,
-          },
-          {
-            label: "Từ chối",
-            value: stats.rejected,
-            color: "red",
-            icon:  <FaTimesCircle />,
-          },
+          { label: "Tổng upload", value: stats.pending + stats.approved + stats.rejected, color: "blue",   icon: <FaCloudUploadAlt /> },
+          { label: "Chờ duyệt",   value: stats.pending,                                  color: "yellow", icon: <FaClock /> },
+          { label: "Đã duyệt",    value: stats.approved,                                 color: "green",  icon: <FaCheckCircle /> },
+          { label: "Từ chối",     value: stats.rejected,                                 color: "red",    icon: <FaTimesCircle /> },
         ].map((card) => (
           <div key={card.label} className={`au-stat-card au-stat-${card.color}`}>
             <div className="au-stat-icon">{card.icon}</div>
@@ -292,7 +298,6 @@ const AdminUploads = () => {
 
       {/* ── TOOLBAR ── */}
       <div className="au-toolbar">
-        {/* Search */}
         <div className="au-search-box">
           <FaSearch className="au-search-icon" />
           <input
@@ -303,23 +308,16 @@ const AdminUploads = () => {
             className="au-search-input"
           />
           {searchTerm && (
-            <button
-              className="au-search-clear"
-              onClick={() => setSearchTerm("")}
-            >
-              ✕
-            </button>
+            <button className="au-search-clear" onClick={() => setSearchTerm("")}>✕</button>
           )}
         </div>
-
-        {/* Filter */}
         <div className="au-filter-group">
           <FaFilter className="au-filter-icon" />
           {[
-            { key: "all",      label: "Tất cả" },
+            { key: "all",      label: "Tất cả"   },
             { key: "pending",  label: "Chờ duyệt" },
-            { key: "approved", label: "Đã duyệt" },
-            { key: "rejected", label: "Từ chối" },
+            { key: "approved", label: "Đã duyệt"  },
+            { key: "rejected", label: "Từ chối"   },
           ].map((f) => (
             <button
               key={f.key}
@@ -361,17 +359,21 @@ const AdminUploads = () => {
             </thead>
             <tbody>
               {filtered.map((upload) => {
-                const statusCfg = STATUS_CONFIG[upload.status] || STATUS_CONFIG.pending;
-                const isLoading = actionLoading === upload._id;
-                const coverURL  = getImageURL(upload);
+                const statusCfg     = STATUS_CONFIG[upload.status] || STATUS_CONFIG.pending;
+                const isLoading     = actionLoading === upload._id;
+                const coverURL      = getImageURL(upload);
+                const isHighlighted = upload._id === highlightSongId; // 👈
 
                 return (
                   <tr
                     key={upload._id}
+                    // 👈 Gán ref cho row được highlight
+                    ref={isHighlighted ? highlightRowRef : null}
                     className={`
                       au-table-row
-                      ${isLoading ? "au-row-loading" : ""}
-                      ${selected?._id === upload._id ? "au-row-selected" : ""}
+                      ${isLoading     ? "au-row-loading"    : ""}
+                      ${selected?._id === upload._id ? "au-row-selected"  : ""}
+                      ${isHighlighted ? "au-row-highlighted" : ""}
                     `}
                   >
                     {/* Bài hát */}
@@ -389,6 +391,12 @@ const AdminUploads = () => {
                           )}
                         </div>
                         <div className="au-song-info">
+                          {/* 👈 Icon chuông nếu là bài từ notification */}
+                          {isHighlighted && (
+                            <span className="au-highlighted-tag">
+                              <FaBell /> Từ thông báo
+                            </span>
+                          )}
                           <span className="au-song-title">{upload.title}</span>
                           <span className="au-song-artist">{upload.artist}</span>
                         </div>
@@ -405,9 +413,7 @@ const AdminUploads = () => {
 
                     {/* Thể loại */}
                     <td>
-                      <span className="au-genre-tag">
-                        {upload.genre || "N/A"}
-                      </span>
+                      <span className="au-genre-tag">{upload.genre || "N/A"}</span>
                     </td>
 
                     {/* Thời lượng */}
@@ -416,40 +422,29 @@ const AdminUploads = () => {
                     </td>
 
                     {/* Ngày upload */}
-                    <td className="au-date">
-                      {formatDate(upload.createdAt)}
-                    </td>
+                    <td className="au-date">{formatDate(upload.createdAt)}</td>
 
                     {/* Trạng thái */}
                     <td>
                       <span className={`au-badge ${statusCfg.className}`}>
-                        {statusCfg.icon}
-                        {statusCfg.label}
+                        {statusCfg.icon} {statusCfg.label}
                       </span>
                       {upload.status === "rejected" && upload.rejectReason && (
-                        <p className="au-reject-reason-preview">
-                          {upload.rejectReason}
-                        </p>
+                        <p className="au-reject-reason-preview">{upload.rejectReason}</p>
                       )}
                     </td>
 
                     {/* Thao tác */}
                     <td>
                       <div className="au-actions">
-                        {/* Xem chi tiết */}
                         <button
                           className="au-btn au-btn-view"
                           onClick={() => setSelected(upload)}
                           title="Xem chi tiết"
                           disabled={isLoading}
                         >
-                          {isLoading
-                            ? <FaSpinner className="au-spin" />
-                            : <FaEye />
-                          }
+                          {isLoading ? <FaSpinner className="au-spin" /> : <FaEye />}
                         </button>
-
-                        {/* Duyệt */}
                         {upload.status !== "approved" && (
                           <button
                             className="au-btn au-btn-approve"
@@ -460,8 +455,6 @@ const AdminUploads = () => {
                             <FaCheckCircle />
                           </button>
                         )}
-
-                        {/* Từ chối */}
                         {upload.status !== "rejected" && (
                           <button
                             className="au-btn au-btn-reject"
@@ -472,8 +465,6 @@ const AdminUploads = () => {
                             <FaTimesCircle />
                           </button>
                         )}
-
-                        {/* Xoá */}
                         <button
                           className="au-btn au-btn-delete"
                           onClick={() => handleDelete(upload._id)}
@@ -492,14 +483,13 @@ const AdminUploads = () => {
         )}
       </div>
 
-      {/* ── KẾT QUẢ TÌM KIẾM ── */}
       {searchTerm && filtered.length > 0 && (
         <p className="au-search-result">
           Tìm thấy <strong>{filtered.length}</strong> kết quả cho "{searchTerm}"
         </p>
       )}
 
-      {/* ── MODAL CHI TIẾT ── */}
+      {/* ── MODALS ── */}
       {selected && (
         <UploadDetailModal
           upload={selected}
@@ -510,8 +500,6 @@ const AdminUploads = () => {
           actionLoading={actionLoading}
         />
       )}
-
-      {/* ── MODAL TỪ CHỐI ── */}
       {rejectModal && (
         <RejectReasonModal
           title={rejectModal.title}
@@ -524,7 +512,6 @@ const AdminUploads = () => {
     </div>
   );
 };
-
 /* ═══════════════════════════════════════
    MODAL: Chi tiết upload
 ═══════════════════════════════════════ */

@@ -2,43 +2,31 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  FaPlay,
-  FaPause,
-  FaStepForward,
-  FaStepBackward,
-  FaRandom,
-  FaRedo,
-  FaHeart,
-  FaRegHeart,
-  FaChevronUp,
-  FaChevronDown,
-  FaListUl,
+  FaPlay, FaPause,
+  FaStepForward, FaStepBackward,
+  FaRandom, FaRedo,
+  FaHeart, FaRegHeart,
+  FaChevronUp, FaChevronDown,
+  FaListUl, FaClock,
 } from "react-icons/fa";
-import { useMusicContext } from "../context/MusicContext";
+import { useMusicContext }  from "../context/MusicContext";
+import {
+  setFaviconWithStatus,
+  resetFavicon,
+  setPageTitle,
+} from "../utils/dynamicFavicon";
+import useSleepTimer   from "../hooks/useSleepTimer";
+import SleepTimerPanel from "./SleepTimerPanel";
 import "./MusicPlayer.css";
 
 const MusicPlayer = () => {
   const {
-    currentSong,
-    isPlaying,
-    currentTime,
-    duration,
-    repeat,
-    shuffle,
-    songs,
-    favoriteSongIds,
-    playSource,
-    currentQueue,
-    togglePlay,
-    playNext,
-    playPrev,
-    seekTo,
-    setRepeat,
-    setShuffle,
-    toggleFavorite,
-    isFavorite,
-    getCoverURL,
-    playSong,
+    currentSong, isPlaying, currentTime, duration,
+    repeat, shuffle, songs,
+    playSource, currentQueue,
+    togglePlay, playNext, playPrev, seekTo,
+    setRepeat, setShuffle, toggleFavorite, isFavorite,
+    getCoverURL, playSong,
   } = useMusicContext();
 
   const [expanded,    setExpanded]    = useState(false);
@@ -47,25 +35,60 @@ const MusicPlayer = () => {
   const navigate  = useNavigate();
   const playerRef = useRef(null);
 
-  // ===== CLICK OUTSIDE ĐỂ ĐÓNG =====
+  // ✅ Ref tránh stale closure
+  const isPlayingRef  = useRef(isPlaying);
+  const togglePlayRef = useRef(togglePlay);
+
+  useEffect(() => { isPlayingRef.current  = isPlaying;  }, [isPlaying]);
+  useEffect(() => { togglePlayRef.current = togglePlay; }, [togglePlay]);
+
+  // ✅ Sleep Timer
+  const {
+    timerActive,
+    timerMinutes,
+    timeRemaining,
+    showTimerPanel,
+    formatRemaining,
+    setTimerMinutes,
+    setShowTimerPanel,
+    startTimer,
+    stopTimer,
+  } = useSleepTimer(() => {
+    if (isPlayingRef.current) togglePlayRef.current();
+  });
+
+  // ===== CLICK OUTSIDE =====
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (playerRef.current && !playerRef.current.contains(e.target)) {
         setExpanded(false);
         setShowQueue(false);
+        setShowTimerPanel(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // ===== CẬP NHẬT QUEUE KHI SOURCE THAY ĐỔI =====
+  // ===== QUEUE =====
   useEffect(() => {
     if (showQueue) generateRandomQueue();
     // eslint-disable-next-line
   }, [playSource, currentQueue]);
 
-  // ===== LABEL THEO SOURCE =====
+  // ===== FAVICON + TITLE =====
+  useEffect(() => {
+    if (!currentSong) {
+      resetFavicon();
+      document.title = "ChillWithF 🎵";
+      return;
+    }
+    const coverUrl = getCoverURL(currentSong);
+    setFaviconWithStatus(coverUrl, isPlaying);
+    setPageTitle(currentSong.title, currentSong.artist, isPlaying);
+  }, [currentSong?._id, isPlaying]);
+
+  // ===== HELPERS =====
   const getQueueLabel = () => {
     switch (playSource) {
       case "favorites": return "❤️ Từ yêu thích";
@@ -74,24 +97,26 @@ const MusicPlayer = () => {
     }
   };
 
-  // ===== TẠO DANH SÁCH QUEUE =====
   const generateRandomQueue = () => {
     if (playSource === "home") {
-      // ✅ Trang chủ: random 20 bài từ tất cả songs
       const shuffled = [...songs]
         .sort(() => Math.random() - 0.5)
         .slice(0, Math.min(20, songs.length));
       setRandomQueue(shuffled);
     } else {
-      // ✅ Favorites/Playlist: dùng đúng currentQueue
       setRandomQueue(currentQueue);
     }
   };
 
-  // ===== TOGGLE QUEUE =====
   const handleToggleQueue = () => {
     if (!showQueue) generateRandomQueue();
     setShowQueue(!showQueue);
+    setShowTimerPanel(false); // ✅ Đóng timer khi mở queue
+  };
+
+  const handleToggleTimer = () => {
+    setShowTimerPanel(!showTimerPanel);
+    setShowQueue(false); // ✅ Đóng queue khi mở timer
   };
 
   const goToSongDetail = () => {
@@ -100,24 +125,22 @@ const MusicPlayer = () => {
 
   const formatTime = (time) => {
     if (isNaN(time)) return "0:00";
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+    const m = Math.floor(time / 60);
+    const s = Math.floor(time % 60);
+    return `${m}:${String(s).padStart(2, "0")}`;
   };
 
   const progressPercent = duration ? (currentTime / duration) * 100 : 0;
 
   const handleProgressClick = (e) => {
-    const bar  = e.currentTarget;
-    const rect = bar.getBoundingClientRect();
+    const rect    = e.currentTarget.getBoundingClientRect();
     const percent = (e.clientX - rect.left) / rect.width;
     seekTo(percent * duration);
   };
 
   const handleRepeat = () => {
     const modes = ["none", "all", "one"];
-    const currentIndex = modes.indexOf(repeat);
-    setRepeat(modes[(currentIndex + 1) % modes.length]);
+    setRepeat(modes[(modes.indexOf(repeat) + 1) % modes.length]);
   };
 
   // ===== KHÔNG CÓ BÀI HÁT =====
@@ -198,7 +221,7 @@ const MusicPlayer = () => {
                 className={`ctrl-btn ${repeat !== "none" ? "active" : ""}`}
                 onClick={handleRepeat}
                 title={
-                  repeat === "none" ? "Không lặp"  :
+                  repeat === "none" ? "Không lặp" :
                   repeat === "all"  ? "Lặp tất cả" : "Lặp 1 bài"
                 }
               >
@@ -207,14 +230,36 @@ const MusicPlayer = () => {
               </button>
             </div>
 
-            {/* ===== ICON DANH SÁCH ===== */}
-            <button
-              className={`queue-icon-btn ${showQueue ? "active" : ""}`}
-              onClick={handleToggleQueue}
-              title={showQueue ? "Đóng danh sách" : "Danh sách"}
-            >
-              <FaListUl />
-            </button>
+            {/* ===== HÀNG DƯỚI: Queue + Timer ===== */}
+            <div className="player-expanded-bottom">
+
+              {/* Nút danh sách */}
+              <button
+                className={`queue-icon-btn ${showQueue ? "active" : ""}`}
+                onClick={handleToggleQueue}
+                title={showQueue ? "Đóng danh sách" : "Xem danh sách"}
+              >
+                <FaListUl />
+              </button>
+
+              {/* Nút hẹn giờ */}
+              <button
+                className={`timer-icon-btn ${timerActive ? "timer-active" : ""} ${showTimerPanel ? "timer-open" : ""}`}
+                onClick={handleToggleTimer}
+                title={timerActive
+                  ? `Hẹn giờ: còn ${formatRemaining(timeRemaining)}`
+                  : "Hẹn giờ tắt nhạc"
+                }
+              >
+                <FaClock />
+                {timerActive && (
+                  <span className="timer-badge">
+                    {formatRemaining(timeRemaining)}
+                  </span>
+                )}
+              </button>
+
+            </div>
 
           </div>
         </div>
@@ -222,7 +267,7 @@ const MusicPlayer = () => {
         {/* ===== THANH COMPACT CHÍNH ===== */}
         <div className="player-bar">
 
-          {/* Bên trái - info */}
+          {/* Trái */}
           <div className="player-song-info">
             <div
               className="player-cover-small clickable"
@@ -232,9 +277,7 @@ const MusicPlayer = () => {
               <img src={getCoverURL(currentSong)} alt={currentSong.title} />
               {isPlaying && (
                 <div className="cover-playing-indicator">
-                  <span></span>
-                  <span></span>
-                  <span></span>
+                  <span></span><span></span><span></span>
                 </div>
               )}
               <div className="cover-detail-overlay-small">
@@ -259,7 +302,7 @@ const MusicPlayer = () => {
             </button>
           </div>
 
-          {/* Giữa - controls + progress */}
+          {/* Giữa */}
           <div className="player-center">
             <div className="player-buttons">
               <button
@@ -282,7 +325,7 @@ const MusicPlayer = () => {
                 className={`ctrl-btn-sm ${repeat !== "none" ? "active" : ""}`}
                 onClick={handleRepeat}
                 title={
-                  repeat === "none" ? "Không lặp"  :
+                  repeat === "none" ? "Không lặp" :
                   repeat === "all"  ? "Lặp tất cả" : "Lặp 1 bài"
                 }
               >
@@ -305,13 +348,31 @@ const MusicPlayer = () => {
             </div>
           </div>
 
-          {/* Phải - expand */}
+          {/* Phải */}
           <div className="player-right">
+            {/* Badge khi chưa expand */}
+            {timerActive && !expanded && (
+              <div
+                className="timer-compact-badge"
+                onClick={() => {
+                  setExpanded(true);
+                  setShowTimerPanel(true);
+                }}
+                title="Hẹn giờ đang chạy"
+              >
+                <FaClock />
+                <span>{formatRemaining(timeRemaining)}</span>
+              </div>
+            )}
+
             <button
               className={`expand-btn ${expanded ? "is-expanded" : ""}`}
               onClick={() => {
                 setExpanded(!expanded);
-                if (expanded) setShowQueue(false);
+                if (expanded) {
+                  setShowQueue(false);
+                  setShowTimerPanel(false);
+                }
               }}
             >
               {expanded ? <FaChevronDown /> : <FaChevronUp />}
@@ -321,20 +382,16 @@ const MusicPlayer = () => {
         </div>
       </div>
 
-      {/* ===== QUEUE PANEL ===== */}
+      {/* ===== QUEUE PANEL - bên phải player ===== */}
       {showQueue && (
         <div className="queue-panel">
           <div className="queue-header">
-
-            {/* ✅ Label thay đổi theo source */}
             <h4>{getQueueLabel()}</h4>
-
-            {/* ✅ Chỉ hiện nút refresh khi ở home */}
             {playSource === "home" && (
               <button
                 className="queue-refresh-btn"
                 onClick={generateRandomQueue}
-                title="Làm mới danh sách"
+                title="Làm mới"
               >
                 <FaRandom />
               </button>
@@ -355,33 +412,24 @@ const MusicPlayer = () => {
                     className={`queue-item ${isActive ? "active" : ""}`}
                     onClick={() => playSong(song, playSource, currentQueue)}
                   >
-                    {/* Index / playing bars */}
                     <div className="queue-index">
                       {isActive && isPlaying ? (
                         <div className="queue-playing-bars">
-                          <span></span>
-                          <span></span>
-                          <span></span>
+                          <span></span><span></span><span></span>
                         </div>
                       ) : (
                         <span>{index + 1}</span>
                       )}
                     </div>
-
-                    {/* Cover */}
                     <img
                       src={getCoverURL(song)}
                       alt={song.title}
                       className="queue-cover"
                     />
-
-                    {/* Info */}
                     <div className="queue-info">
                       <span className="queue-title">{song.title}</span>
                       <span className="queue-artist">{song.artist}</span>
                     </div>
-
-                    {/* Fav */}
                     <button
                       className={`queue-fav-btn ${isFavorite(song._id) ? "liked" : ""}`}
                       onClick={(e) => {
@@ -396,6 +444,22 @@ const MusicPlayer = () => {
               })
             )}
           </div>
+        </div>
+      )}
+
+      {/* ✅ TIMER PANEL - bên phải player, giống queue panel */}
+      {showTimerPanel && (
+        <div className="timer-panel">
+          <SleepTimerPanel
+            timerActive={timerActive}
+            timerMinutes={timerMinutes}
+            timeRemaining={timeRemaining}
+            formatRemaining={formatRemaining}
+            onSetMinutes={setTimerMinutes}
+            onStart={startTimer}
+            onStop={stopTimer}
+            onClose={() => setShowTimerPanel(false)}
+          />
         </div>
       )}
 

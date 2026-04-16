@@ -23,13 +23,8 @@ export const MusicProvider = ({ children }) => {
   const [shuffle, setShuffle]                 = useState(false);
   const [searchTerm, setSearchTerm]           = useState("");
   const [loading, setLoading]                 = useState(false);
-
-  // ✅ Theo dõi đang phát từ đâu
   const [playSource, setPlaySource]           = useState("home");
-  // ✅ Danh sách đang phát (tùy theo source)
   const [currentQueue, setCurrentQueue]       = useState([]);
-
-  // ===== LỊCH SỬ NGHE =====
   const [listenedSongIds, setListenedSongIds] = useState([]);
 
   useEffect(() => {
@@ -70,6 +65,18 @@ export const MusicProvider = ({ children }) => {
     else setFavoriteSongIds([]);
   }, [isAuthenticated]);
 
+  // ✅ THÊM: Đổi title theo bài đang phát
+  useEffect(() => {
+    if (currentSong && isPlaying) {
+      document.title = ` ${currentSong.title} — ${currentSong.artist} | ChillWithF `;
+    } else if (currentSong && !isPlaying) {
+      document.title = ` ${currentSong.title} — ${currentSong.artist} | ChillWithF `;
+    } else {
+      // Không có bài nào → giữ title mặc định (usePageTitle sẽ xử lý)
+      document.title = "ChillWithF ";
+    }
+  }, [currentSong, isPlaying]);
+
   const fetchSongs = async () => {
     try {
       setLoading(true);
@@ -95,7 +102,6 @@ export const MusicProvider = ({ children }) => {
     }
   };
 
-  // ===== AUDIO EVENTS =====
   useEffect(() => {
     if (currentSong) {
       if (!currentSong.audioFile) {
@@ -145,7 +151,6 @@ export const MusicProvider = ({ children }) => {
     // eslint-disable-next-line
   }, [repeat, shuffle, currentSong, currentQueue]);
 
-  // ===== CONTROLS =====
   const togglePlay = () => {
     if (!currentSong && songs.length > 0) {
       playSong(songs[0], "home", songs);
@@ -159,18 +164,14 @@ export const MusicProvider = ({ children }) => {
     setIsPlaying(!isPlaying);
   };
 
-  // ✅ playSong nhận thêm source và queue
   const playSong = (song, source = null, queue = null) => {
     setCurrentSong(song);
     setIsPlaying(true);
     addToListened(song._id);
-
-    // Chỉ update source/queue khi được truyền vào
     if (source) setPlaySource(source);
     if (queue)  setCurrentQueue(queue);
   };
 
-  // ✅ playNext/playPrev dùng currentQueue
   const playNext = () => {
     if (!currentSong || currentQueue.length === 0) return;
     const currentIndex = currentQueue.findIndex((s) => s._id === currentSong._id);
@@ -212,7 +213,6 @@ export const MusicProvider = ({ children }) => {
     audioRef.current.volume = vol;
   };
 
-  // ===== THÍCH / BỎ THÍCH =====
   const toggleFavorite = async (songId) => {
     if (!isAuthenticated) {
       alert("Vui lòng đăng nhập để thích bài hát!");
@@ -273,8 +273,8 @@ export const MusicProvider = ({ children }) => {
     loading,
     favoriteSongIds,
     listenedSongIds,
-    playSource,       // ✅
-    currentQueue,     // ✅
+    playSource,
+    currentQueue,
     setSearchTerm,
     togglePlay,
     playSong,

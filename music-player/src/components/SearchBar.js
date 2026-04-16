@@ -1,4 +1,3 @@
-// src/components/SearchBar.js
 import React, { useState, useEffect, useRef } from "react";
 import { FaSearch, FaTimes } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
@@ -10,42 +9,66 @@ const SearchBar = () => {
   const [inputValue, setInputValue]       = useState("");
   const [showPanel, setShowPanel]         = useState(false);
   const [suggestions, setSuggestions]     = useState([]);
-  const navigate  = useNavigate();
+  const [isExpanded, setIsExpanded]       = useState(false);
+  const [noResult, setNoResult]           = useState(false); // ✅ THÊM
+  const navigate   = useNavigate();
   const wrapperRef = useRef(null);
+  const inputRef   = useRef(null);
 
-  // ===== CLICK OUTSIDE → ĐÓNG PANEL =====
+  // ===== CLICK OUTSIDE =====
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
         setShowPanel(false);
+        setIsExpanded(false); // ✅ Thu lại khi click ngoài
+        setNoResult(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // ===== LỌC GỢI Ý KHI GÕ =====
+  // ===== LỌC GỢI Ý =====
   useEffect(() => {
     if (!inputValue.trim()) {
       setSuggestions([]);
       setShowPanel(false);
+      setNoResult(false);
       return;
     }
 
-    const keyword = inputValue.toLowerCase();
+    const keyword  = inputValue.toLowerCase();
     const filtered = songs
       .filter(
         (s) =>
           s.title.toLowerCase().includes(keyword) ||
           s.artist.toLowerCase().includes(keyword)
       )
-      .slice(0, 6); // Chỉ hiện tối đa 6 gợi ý
+      .slice(0, 6);
 
     setSuggestions(filtered);
+    setNoResult(filtered.length === 0); // ✅ Không có kết quả
     setShowPanel(true);
   }, [inputValue, songs]);
 
-  // ===== ENTER → NAVIGATE ĐẾN TRANG KẾT QUẢ =====
+  // ===== HOVER =====
+  const handleMouseEnter = () => {
+    setIsExpanded(true);
+    setTimeout(() => inputRef.current?.focus(), 250);
+  };
+
+  const handleMouseLeave = () => {
+    // ✅ Thu lại ngay khi rời chuột nếu không có text và không focus
+    if (!inputValue.trim()) {
+      if (document.activeElement !== inputRef.current) {
+        setIsExpanded(false);
+        setShowPanel(false);
+        setNoResult(false);
+      }
+    }
+  };
+
+  // ===== KEYBOARD =====
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && inputValue.trim()) {
       setShowPanel(false);
@@ -54,18 +77,21 @@ const SearchBar = () => {
     if (e.key === "Escape") {
       setShowPanel(false);
       setInputValue("");
+      setIsExpanded(false);
+      setNoResult(false);
+      inputRef.current?.blur();
     }
   };
 
-  // ===== CLICK VÀO GỢI Ý → PHÁT NHẠC =====
   const handleSuggestionClick = (song) => {
     setShowPanel(false);
     setInputValue("");
+    setIsExpanded(false);
+    setNoResult(false);
     playSong(song, "home", songs);
     navigate(`/song/${song._id}`);
   };
 
-  // ===== CLICK NÚT TÌM KIẾM =====
   const handleSearch = () => {
     if (inputValue.trim()) {
       setShowPanel(false);
@@ -73,87 +99,126 @@ const SearchBar = () => {
     }
   };
 
-  // ===== XÓA INPUT =====
   const handleClear = () => {
     setInputValue("");
     setSuggestions([]);
     setShowPanel(false);
+    setNoResult(false);
+    inputRef.current?.focus();
+  };
+
+  const handleIconClick = () => {
+    if (!isExpanded) {
+      setIsExpanded(true);
+      setTimeout(() => inputRef.current?.focus(), 250);
+    } else {
+      handleSearch();
+    }
   };
 
   return (
-    <div className="search-bar-wrapper" ref={wrapperRef}>
-      <div className={`search-bar ${showPanel ? "active" : ""}`}>
+    <div
+      className="search-bar-wrapper"
+      ref={wrapperRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <div className={`
+        search-bar
+        ${isExpanded  ? "expanded"   : ""}
+        ${showPanel   ? "panel-open" : ""}
+      `}>
 
-        {/* Icon tìm kiếm */}
-        <button className="search-icon-btn" onClick={handleSearch}>
+        {/* Icon */}
+        <button className="search-icon-btn" onClick={handleIconClick}>
           <FaSearch />
         </button>
 
         {/* Input */}
         <input
+          ref={inputRef}
           type="text"
           placeholder="Tìm kiếm bài hát, nghệ sĩ..."
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          onFocus={() => suggestions.length > 0 && setShowPanel(true)}
+          onFocus={() => {
+            setIsExpanded(true);
+            if (suggestions.length > 0 || noResult) setShowPanel(true);
+          }}
+          onBlur={() => {
+            // ✅ Thu lại sau blur nếu không có text
+            setTimeout(() => {
+              if (
+                !inputValue.trim() &&
+                !wrapperRef.current?.contains(document.activeElement)
+              ) {
+                setIsExpanded(false);
+                setShowPanel(false);
+                setNoResult(false);
+              }
+            }, 150);
+          }}
+          className="search-input"
         />
 
-        {/* Nút xóa */}
-        {inputValue && (
+        {/* Clear */}
+        {inputValue && isExpanded && (
           <button className="search-clear-btn" onClick={handleClear}>
             <FaTimes />
           </button>
         )}
       </div>
 
-      {/* ===== PANEL GỢI Ý ===== */}
-      {showPanel && suggestions.length > 0 && (
+      {/* ===== PANEL ===== */}
+      {showPanel && isExpanded && (
         <div className="search-panel">
 
-          <div className="search-panel-header">
-            <span>Gợi ý</span>
-            <button
-              className="search-panel-all"
-              onClick={handleSearch}
-            >
-              Xem tất cả kết quả
-            </button>
-          </div>
+          {/* ✅ Không có kết quả */}
+          {noResult ? (
+            <div className="search-no-result">
+              <span className="search-no-result-icon">🔍</span>
+              <p>Không tìm thấy kết quả cho</p>
+              <strong>"{inputValue}"</strong>
+            </div>
+          ) : (
+            <>
+              <div className="search-panel-header">
+                <span>Gợi ý</span>
+                <button className="search-panel-all" onClick={handleSearch}>
+                  Xem tất cả kết quả
+                </button>
+              </div>
 
-          <ul className="search-suggestions">
-            {suggestions.map((song) => (
-              <li
-                key={song._id}
-                className="suggestion-item"
-                onClick={() => handleSuggestionClick(song)}
-              >
-                {/* Ảnh */}
-                <img
-                  src={getCoverURL(song)}
-                  alt={song.title}
-                  className="suggestion-cover"
-                  onError={(e) => { e.target.src = "/images/default-cover.jpg"; }}
-                />
+              <ul className="search-suggestions">
+                {suggestions.map((song) => (
+                  <li
+                    key={song._id}
+                    className="suggestion-item"
+                    onClick={() => handleSuggestionClick(song)}
+                  >
+                    <img
+                      src={getCoverURL(song)}
+                      alt={song.title}
+                      className="suggestion-cover"
+                      onError={(e) => { e.target.src = "/images/default-cover.jpg"; }}
+                    />
+                    <div className="suggestion-info">
+                      <span className="suggestion-title">{song.title}</span>
+                      <span className="suggestion-artist">{song.artist}</span>
+                    </div>
+                    <span className="suggestion-tag">Bài hát</span>
+                  </li>
+                ))}
+              </ul>
 
-                {/* Info */}
-                <div className="suggestion-info">
-                  <span className="suggestion-title">{song.title}</span>
-                  <span className="suggestion-artist">{song.artist}</span>
-                </div>
-
-                {/* Tag */}
-                <span className="suggestion-tag">Bài hát</span>
-              </li>
-            ))}
-          </ul>
-
-          {/* Gợi ý enter */}
-          <div className="search-panel-footer">
-            <span>Nhấn</span>
-            <kbd>Enter</kbd>
-            <span>để xem tất cả kết quả</span>
-          </div>
+              <div className="search-panel-footer">
+                <span>Nhấn</span>
+                <kbd>Enter</kbd>
+                <span>để xem tất cả kết quả</span>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

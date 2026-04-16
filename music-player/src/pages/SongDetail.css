@@ -2,10 +2,12 @@
 
 .song-detail-page {
   padding: 20px;
-  height: 100%;         
+  min-height: 100%;        /* ✅ min-height thay vì height cố định */
   display: flex;
-  flex-direction: column;
-  overflow: hidden;       
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0;
+  overflow: visible;       /* ✅ visible - để main-content scroll */
   box-sizing: border-box;
 }
 
@@ -974,3 +976,181 @@
   border-color: #1db954;
   color: #1db954;
 }
+
+/* ========================================
+   LAYOUT MỚI: page = row (left-sidebar + content)
+   ======================================== */
+
+.song-detail-page {
+  padding: 20px;
+  height: 100%;
+  display: flex;
+  flex-direction: row;      /* ✅ ĐỔI: column → row */
+  align-items: flex-start;
+  gap: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* ========================================
+   CỘT TRÁI: back-button + mini-view (khi collapsed)
+   ======================================== */
+
+.left-sidebar {
+  display: flex;
+  flex-direction: column;   /* ✅ xếp dọc */
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  padding-top: 2px;
+  margin-right: 16px;       /* khoảng cách với nội dung */
+  /* Chiều rộng đủ để chứa back-button và mini-view */
+  width: 100px;
+}
+
+/* ===== NÚT QUAY LẠI - ghi đè để vừa với sidebar ===== */
+.left-sidebar .back-button {
+  margin-bottom: 0;         /* bỏ margin cũ, dùng gap của sidebar */
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 50%;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ===== MINI VIEW trong sidebar ===== */
+.left-sidebar .mini-view {
+  display: flex;            /* ✅ luôn flex (không cần is-collapsed nữa) */
+  width: 90px;
+  padding: 12px 8px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.left-sidebar .mini-view:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ===== ẨN mini-view cũ bên trong song-info-section ===== */
+.song-info-section .mini-view {
+  display: none !important;
+}
+
+/* ========================================
+   CONTAINER: khi collapsed ẩn panel trái
+   ======================================== */
+
+.song-detail-container {
+  flex: 1;                  /* chiếm phần còn lại */
+  min-width: 0;
+}
+
+/* Khi collapsed: thu panel trái lại */
+.song-detail-container.collapsed {
+  grid-template-columns: 0px 1fr; /* ✅ ẩn hoàn toàn panel trái */
+}
+
+.song-detail-container.collapsed .song-info-section {
+  display: none;            /* ẩn hẳn */
+}
+
+/* ========================================
+   MINI PANELS: lyrics + video cạnh nhau
+   ======================================== */
+
+.mini-panels-container {
+  display: flex;
+  flex-direction: row;      /* ✅ cạnh nhau */
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+}
+
+.mini-panels-container .mini-panel {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Khi có 2 panels: chia đều */
+.mini-panels-container.two-panels .mini-panel {
+  flex: 1;
+}
+
+/* ========================================
+   LAYOUT MỚI
+   ======================================== */
+
+.song-detail-page {
+  padding: 20px;
+  height: 100%;
+  display: flex;
+  flex-direction: row;      /* ✅ row thay vì column */
+  align-items: flex-start;
+  gap: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* ===== CỘT TRÁI: back-button + mini-view ===== */
+.left-sidebar {
+  display: flex;
+  flex-direction: column;   /* ✅ xếp dọc */
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  padding-top: 2px;
+  margin-right: 16px;
+  width: 58px;              /* vừa đủ chứa back-button */
+}
+
+/* Ghi đè back-button khi trong sidebar */
+.left-sidebar .back-button {
+  margin-bottom: 0;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 50%;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Mini view trong sidebar */
+.left-sidebar .mini-view {
+  display: flex;
+  width: 100%;
+  padding: 12px 8px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.left-sidebar .mini-view:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ===== CONTAINER chính chiếm phần còn lại ===== */
+.song-detail-container {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  gap: 30px;
+  align-items: start;
+  min-height: 0;
+  overflow: hidden;
+  transition: grid-template-columns 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.song-detail-container.collapsed {
+  grid-template-columns: 1fr; /* ✅ khi collapsed chỉ còn panel phải */
+}
+
+/* ===== MINI PANELS: lyrics + video cạnh nhau ===== */

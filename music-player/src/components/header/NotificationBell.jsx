@@ -1,181 +1,273 @@
 // src/components/header/NotificationBell.jsx
 import React, { useState, useRef, useEffect } from "react";
-import { FaBell } from "react-icons/fa";
+import {
+  FaBell, FaCheck, FaMusic, FaSpinner,
+  FaUser, FaCheckCircle, FaTimesCircle,
+} from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import { useNotifications } from "../../context/NotificationContext";
+import "./NotificationBell.css";
 
-const MOCK_NOTIFICATIONS = [
-  {
-    id: 1,
-    type: "like",
-    message: "Nguyễn Văn A đã thích bài hát của bạn",
-    time: "2 phút trước",
-    isRead: false,
-    avatar: "https://i.pravatar.cc/32?img=1",
-    link: "/songs/123",
+/* ══════════════════════════════════════════
+   Config theo type
+══════════════════════════════════════════ */
+const TYPE_CONFIG = {
+  song_approved: {
+    emoji: "✅",
+    icon:  <FaCheckCircle />,
+    color: "#34d399",
+    bg:    "rgba(52,211,153,0.12)",
+    label: "Đã duyệt",
   },
-  {
-    id: 2,
-    type: "follow",
-    message: "Trần Thị B đã theo dõi bạn",
-    time: "10 phút trước",
-    isRead: false,
-    avatar: "https://i.pravatar.cc/32?img=2",
-    link: "/profile/b",
+  song_rejected: {
+    emoji: "❌",
+    icon:  <FaTimesCircle />,
+    color: "#f87171",
+    bg:    "rgba(248,113,113,0.12)",
+    label: "Từ chối",
   },
-  {
-    id: 3,
-    type: "comment",
-    message: "Lê Văn C đã bình luận về playlist của bạn",
-    time: "1 giờ trước",
-    isRead: true,
-    avatar: "https://i.pravatar.cc/32?img=3",
-    link: "/playlist/456",
+  system: {
+    emoji: "🔔",
+    icon:  <FaBell />,
+    color: "#818cf8",
+    bg:    "rgba(129,140,248,0.12)",
+    label: "Hệ thống",
   },
-  {
-    id: 4,
-    type: "system",
-    message: "Chào mừng bạn đến với MusicVN! 🎵",
-    time: "1 ngày trước",
-    isRead: true,
-    avatar: null,
-    link: "/",
+  new_upload: {
+    emoji: "🎵",
+    icon:  <FaMusic />,
+    color: "#fbbf24",
+    bg:    "rgba(251,191,36,0.12)",
+    label: "Upload",
   },
-];
-
-const TYPE_ICON = {
-  like:    "❤️",
-  follow:  "👤",
-  comment: "💬",
-  system:  "🔔",
 };
 
+/* ══════════════════════════════════════════
+   Avatar theo type
+══════════════════════════════════════════ */
+const NotificationAvatar = ({ noti }) => {
+  const cfg = TYPE_CONFIG[noti.type] || TYPE_CONFIG.system;
+
+  if (noti.type === "song_approved" || noti.type === "song_rejected") {
+    const coverURL = noti.data?.coverImage
+      ? `http://localhost:5000/uploads/covers/${noti.data.coverImage}`
+      : null;
+
+    return (
+      <div className="noti-avatar">
+        {coverURL ? (
+          <img
+            src={coverURL}
+            alt="cover"
+            className="noti-avatar-img"
+            onError={(e) => { e.target.style.display = "none"; }}
+          />
+        ) : (
+          <div
+            className="noti-avatar-icon"
+            style={{ background: cfg.bg, color: cfg.color }}
+          >
+            <FaMusic />
+          </div>
+        )}
+        <span className="noti-type-badge">{cfg.emoji}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="noti-avatar">
+      <div
+        className="noti-avatar-icon"
+        style={{ background: cfg.bg, color: cfg.color }}
+      >
+        {cfg.icon}
+      </div>
+      <span className="noti-type-badge">{cfg.emoji}</span>
+    </div>
+  );
+};
+
+/* ══════════════════════════════════════════
+   MAIN COMPONENT
+══════════════════════════════════════════ */
 const NotificationBell = () => {
-  const [isOpen, setIsOpen]               = useState(false);
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
-  const dropdownRef                       = useRef(null);
-  const navigate                          = useNavigate();
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef         = useRef(null);
+  const navigate            = useNavigate();
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const {
+    notifications, unreadCount, loading,
+    markAsRead, markAllAsRead,
+    deleteNotification, fetchNotifications,
+  } = useNotifications();
 
-  // ===== CLICK OUTSIDE =====
+  /* ── Click outside ── */
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target))
         setIsOpen(false);
-      }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const handleMarkAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  const handleToggle = () => {
+    if (!isOpen) fetchNotifications();
+    setIsOpen(!isOpen);
   };
 
-  const handleClickItem = (notification) => {
-    // Đánh dấu đã đọc
-    setNotifications((prev) =>
-      prev.map((n) => n.id === notification.id ? { ...n, isRead: true } : n)
-    );
+  const handleClickItem = async (noti) => {
+    if (!noti.isRead) await markAsRead(noti._id);
     setIsOpen(false);
-    navigate(notification.link);
+    if (noti.data?.songId) navigate(`/song/${noti.data.songId}`);
   };
 
-  const handleDeleteItem = (e, id) => {
-    e.stopPropagation(); // Không trigger handleClickItem
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  /* ── Navigate đến trang notifications ── */
+  const handleViewAll = () => {
+    setIsOpen(false);
+    navigate("/notifications");
+  };
+
+  const formatTime = (dateStr) => {
+    const diff  = Date.now() - new Date(dateStr);
+    const mins  = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days  = Math.floor(diff / 86400000);
+    if (mins  < 1)  return "Vừa xong";
+    if (mins  < 60) return `${mins} phút trước`;
+    if (hours < 24) return `${hours} giờ trước`;
+    return `${days} ngày trước`;
   };
 
   return (
     <div className="notification-wrapper" ref={dropdownRef}>
 
-      {/* ===== BELL BUTTON ===== */}
+      {/* ── Bell button ── */}
       <button
         className={`notification-bell ${isOpen ? "active" : ""}`}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         aria-label="Thông báo"
       >
         <FaBell />
         {unreadCount > 0 && (
           <span className="notification-badge">
-            {unreadCount > 9 ? "9+" : unreadCount}
+            {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
 
-      {/* ===== DROPDOWN ===== */}
+      {/* ── Dropdown ── */}
       {isOpen && (
         <div className="notification-dropdown">
 
-          {/* Header dropdown */}
+          {/* ════ Header ════ */}
           <div className="notification-header">
-            <span className="notification-title">Thông báo</span>
+            <span className="notification-title">
+              Thông báo
+              {unreadCount > 0 && (
+                <span className="header-unread-count">{unreadCount} mới</span>
+              )}
+            </span>
             {unreadCount > 0 && (
-              <button
-                className="notification-mark-all"
-                onClick={handleMarkAllRead}
-              >
-                Đánh dấu đã đọc
+              <button className="notification-mark-all" onClick={markAllAsRead}>
+                <FaCheck /> Đọc tất cả
               </button>
             )}
           </div>
 
-          {/* Danh sách */}
+          {/* ════ List ════ */}
           <div className="notification-list">
-            {notifications.length === 0 ? (
-              <div className="notification-empty">
-                <FaBell className="empty-icon" />
-                <p>Không có thông báo nào</p>
+            {loading ? (
+              <div className="notification-loading">
+                <FaSpinner className="spin" /> Đang tải...
               </div>
+
+            ) : notifications.length === 0 ? (
+              /* ── Empty state ── */
+              <div className="notification-empty">
+                <FaBell className="notification-empty-icon" />
+                <p className="notification-empty-text">Không có thông báo nào</p>
+                <p className="notification-empty-sub">
+                  Bạn sẽ nhận thông báo khi có cập nhật mới
+                </p>
+              </div>
+
             ) : (
-              notifications.map((noti) => (
-                <div
-                  key={noti.id}
-                  className={`notification-item ${!noti.isRead ? "unread" : ""}`}
-                  onClick={() => handleClickItem(noti)}
-                >
-                  {/* Avatar hoặc icon */}
-                  <div className="noti-avatar">
-                    {noti.avatar ? (
-                      <img src={noti.avatar} alt="avatar" />
-                    ) : (
-                      <div className="noti-avatar-placeholder">🎵</div>
-                    )}
-                    <span className="noti-type-icon">
-                      {TYPE_ICON[noti.type]}
-                    </span>
-                  </div>
+              notifications.map((noti) => {
+                const cfg = TYPE_CONFIG[noti.type] || TYPE_CONFIG.system;
+                return (
+                  <div
+                    key={noti._id}
+                    className={`notification-item ${!noti.isRead ? "unread" : ""}`}
+                    style={{
+                      borderLeft: !noti.isRead
+                        ? `3px solid ${cfg.color}`
+                        : "3px solid transparent",
+                    }}
+                    onClick={() => handleClickItem(noti)}
+                  >
+                    <NotificationAvatar noti={noti} />
 
-                  {/* Nội dung */}
-                  <div className="noti-content">
-                    <p className="noti-message">{noti.message}</p>
-                    <span className="noti-time">{noti.time}</span>
-                  </div>
+                    {/* Content */}
+                    <div className="noti-content">
+                      <div className="noti-content-top">
+                        <span
+                          className="noti-type-label"
+                          style={{ color: cfg.color }}
+                        >
+                          {cfg.label}
+                        </span>
+                        <span className="noti-time">
+                          {formatTime(noti.createdAt)}
+                        </span>
+                      </div>
+                      <p className="noti-title">{noti.title}</p>
+                      <p className="noti-message">{noti.message}</p>
 
-                  {/* Dot chưa đọc + nút xóa */}
-                  <div className="noti-actions">
-                    {!noti.isRead && <span className="unread-dot" />}
-                    <button
-                      className="noti-delete"
-                      onClick={(e) => handleDeleteItem(e, noti.id)}
-                      aria-label="Xóa thông báo"
-                    >
-                      ×
-                    </button>
+                      {/* Lý do từ chối */}
+                      {noti.type === "song_rejected" && noti.data?.rejectReason && (
+                        <p className="noti-reject-reason">
+                          ⚠️ {noti.data.rejectReason}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="noti-actions">
+                      {!noti.isRead && (
+                        <span
+                          className="unread-dot"
+                          style={{ background: cfg.color }}
+                        />
+                      )}
+                      <button
+                        className="noti-delete"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteNotification(noti._id);
+                        }}
+                        title="Xóa"
+                      >
+                        ×
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
-          {/* Footer */}
-          {notifications.length > 0 && (
-            <div className="notification-footer">
-              <button onClick={() => { setIsOpen(false); navigate("/notifications"); }}>
-                Xem tất cả thông báo
-              </button>
-            </div>
-          )}
+          {/* ════ Footer - LUÔN hiện ════ */}
+          <div className="notification-footer">
+            <button
+              className="notification-view-all"
+              onClick={handleViewAll}
+            >
+              <FaBell />
+              Xem tất cả thông báo
+            </button>
+          </div>
 
         </div>
       )}

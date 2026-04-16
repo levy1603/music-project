@@ -212,20 +212,20 @@ const ProfilePage = () => {
 
             {/* ✅ Bài đã upload - click để xem */}
             <div
-              className="stat-card clickable"
+              className="profile-stat-card clickable"
               onClick={() => setShowMySongs(true)}
               title="Xem bài đã upload"
             >
-              <FaMusic className="stat-icon music" />
-              <span className="stat-number">{uploadCount}</span>
-              <span className="stat-label">Bài đã upload</span>
+              <FaMusic className="profile-stat-icon music" />
+              <span className="profile-stat-number">{uploadCount}</span>
+              <span className="profile-stat-label">Bài đã upload</span>
             </div>
 
             {/* Yêu thích */}
-            <div className="stat-card">
-              <FaHeart className="stat-icon heart" />
-              <span className="stat-number">{favoriteCount}</span>
-              <span className="stat-label">Yêu thích</span>
+            <div className="profile-stat-card">
+              <FaHeart className="profile-stat-icon heart" />
+              <span className="profile-stat-number">{favoriteCount}</span>
+              <span className="profile-stat-label">Yêu thích</span>
             </div>
           </div>
 

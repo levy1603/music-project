@@ -1,8 +1,15 @@
 // controllers/userController.js
-const User = require("../models/User");
-const Song = require("../models/Song");
-const path = require("path");
-const fs   = require("fs");
+const User        = require("../models/User");
+const Song        = require("../models/Song");
+const PlayHistory = require("../models/PlayHistory"); // 👈 THÊM
+const path        = require("path");
+const fs          = require("fs");
+
+/* ═══════════════════════════════════════════
+   Giữ nguyên các function cũ
+   getFavorites, updateProfile, updateAvatar,
+   getAllUsers, deleteUser, updateUserRole, toggleBanUser
+═══════════════════════════════════════════ */
 
 const getFavorites = async (req, res, next) => {
   try {
@@ -13,7 +20,7 @@ const getFavorites = async (req, res, next) => {
     res.status(200).json({
       success: true,
       count: user.favorites.length,
-      data: user.favorites,
+      data:  user.favorites,
     });
   } catch (error) { next(error); }
 };
@@ -29,7 +36,11 @@ const updateProfile = async (req, res, next) => {
     }
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
-      { username: username.trim(), nickname: nickname?.trim() || "", bio: bio?.trim() || "" },
+      {
+        username: username.trim(),
+        nickname: nickname?.trim() || "",
+        bio:      bio?.trim()      || "",
+      },
       { new: true, runValidators: true }
     ).select("-password");
 
@@ -39,7 +50,7 @@ const updateProfile = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Cập nhật thông tin thành công!",
-      data: { ...updatedUser.toObject(), uploadCount, favoriteCount },
+      data:    { ...updatedUser.toObject(), uploadCount, favoriteCount },
     });
   } catch (error) { next(error); }
 };
@@ -64,14 +75,17 @@ const updateAvatar = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Cập nhật avatar thành công!",
-      data: { avatar: avatarPath, user: updatedUser },
+      data:    { avatar: avatarPath, user: updatedUser },
     });
   } catch (error) { next(error); }
 };
 
 const getAllUsers = async (req, res, next) => {
   try {
-    const users = await User.find().select("-password -__v").sort({ createdAt: -1 });
+    const users = await User.find()
+      .select("-password -__v")
+      .sort({ createdAt: -1 });
+
     const usersWithCount = await Promise.all(
       users.map(async (user) => {
         const uploadCount = await Song.countDocuments({ uploadedBy: user._id });
@@ -80,8 +94,8 @@ const getAllUsers = async (req, res, next) => {
     );
     res.status(200).json({
       success: true,
-      count: users.length,
-      data: usersWithCount,
+      count:   users.length,
+      data:    usersWithCount,
     });
   } catch (error) { next(error); }
 };
@@ -122,7 +136,7 @@ const updateUserRole = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: `Đã ${role === "admin" ? "cấp" : "thu hồi"} quyền Admin`,
-      data: user,
+      data:    user,
     });
   } catch (error) { next(error); }
 };
@@ -143,66 +157,75 @@ const toggleBanUser = async (req, res, next) => {
     ).select("-password");
 
     res.status(200).json({
-      success: true,
-      message: updatedUser.isBanned ? "Đã khóa tài khoản" : "Đã mở khóa tài khoản",
-      data: updatedUser,
+      success:  true,
+      message:  updatedUser.isBanned ? "Đã khóa tài khoản" : "Đã mở khóa tài khoản",
+      data:     updatedUser,
     });
   } catch (error) { next(error); }
 };
-const getDailyStats = async () => {
-  const days  = [];
-  const now   = new Date();
-  const labels = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
-  // Lấy ngày đầu tuần (Thứ 2)
-  const startOfWeek = new Date(now);
-  const day = now.getDay(); // 0 = CN, 1 = T2, ...
-  const diffToMonday = day === 0 ? -6 : 1 - day;
+/* ═══════════════════════════════════════════
+   THỐNG KÊ TUẦN (7 ngày gần nhất)
+═══════════════════════════════════════════ */
+const getDailyStats = async () => {
+  const days    = [];
+  const now     = new Date();
+  const LABELS  = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+  const MONTHS  = ["Th1","Th2","Th3","Th4","Th5","Th6","Th7","Th8","Th9","Th10","Th11","Th12"];
+
+  // ── Tính ngày đầu tuần (Thứ 2) ──
+  const startOfWeek  = new Date(now);
+  const currentDay   = now.getDay(); // 0=CN
+  const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay;
   startOfWeek.setDate(now.getDate() + diffToMonday);
   startOfWeek.setHours(0, 0, 0, 0);
 
-  // Lặp 7 ngày từ T2 → CN
   for (let i = 0; i < 7; i++) {
     const startDay = new Date(startOfWeek);
     startDay.setDate(startOfWeek.getDate() + i);
+    startDay.setHours(0, 0, 0, 0);
 
     const endDay = new Date(startDay);
-    endDay.setDate(startDay.getDate() + 1);
+    endDay.setHours(23, 59, 59, 999);
 
-    const dayOfWeek = startDay.getDay(); // 0=CN, 1=T2...
-    const label     = labels[dayOfWeek];
-    const dateStr   = `${startDay.getDate()}/${startDay.getMonth() + 1}`;
+    const dayOfWeek = startDay.getDay();
+    const label     = LABELS[dayOfWeek];
+    const dateStr   = `${startDay.getDate()}/${MONTHS[startDay.getMonth()]}`;
+    const isToday   = startDay.toDateString() === now.toDateString();
 
+    // ✅ Bài hát mới - dùng createdAt (đúng)
     const songsCount = await Song.countDocuments({
-      createdAt: { $gte: startDay, $lt: endDay },
+      createdAt: { $gte: startDay, $lte: endDay },
+      status:    "approved",
     });
 
+    // ✅ User mới - dùng createdAt (đúng)
     const usersCount = await User.countDocuments({
-      createdAt: { $gte: startDay, $lt: endDay },
+      createdAt: { $gte: startDay, $lte: endDay },
     });
 
-    const playsData = await Song.aggregate([
-      { $match: { createdAt: { $gte: startDay, $lt: endDay } } },
-      { $group: { _id: null, total: { $sum: "$playCount" } } },
-    ]);
-
-    // ✅ Đánh dấu ngày hôm nay
-    const isToday = startDay.toDateString() === now.toDateString();
+    // ✅ Lượt nghe - dùng PlayHistory.playedAt (ĐÚNG ngày nghe thực tế)
+    const playsCount = await PlayHistory.countDocuments({
+      playedAt: { $gte: startDay, $lte: endDay },
+    });
 
     days.push({
       day:     `${label}\n${dateStr}`,
-      label:   label,
+      label,
       date:    dateStr,
       songs:   songsCount,
       users:   usersCount,
-      plays:   playsData[0]?.total || 0,
+      plays:   playsCount, // ← Lượt nghe đúng ngày
       isToday,
     });
   }
 
   return days;
 };
-// ✅ Định nghĩa getMonthlyStats TRƯỚC getStats
+
+/* ═══════════════════════════════════════════
+   THỐNG KÊ 12 THÁNG
+═══════════════════════════════════════════ */
 const getMonthlyStats = async () => {
   const months = [];
   const now    = new Date();
@@ -210,56 +233,67 @@ const getMonthlyStats = async () => {
   for (let i = 11; i >= 0; i--) {
     const date       = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const startMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-    const endMonth   = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+    const endMonth   = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
 
     const label = `T${date.getMonth() + 1}`;
 
+    // ✅ Bài hát mới theo tháng
     const songsCount = await Song.countDocuments({
-      createdAt: { $gte: startMonth, $lt: endMonth },
+      createdAt: { $gte: startMonth, $lte: endMonth },
+      status:    "approved",
     });
 
+    // ✅ User mới theo tháng
     const usersCount = await User.countDocuments({
-      createdAt: { $gte: startMonth, $lt: endMonth },
+      createdAt: { $gte: startMonth, $lte: endMonth },
     });
 
-    const playsData = await Song.aggregate([
-      { $match: { createdAt: { $gte: startMonth, $lt: endMonth } } },
-      { $group: { _id: null, total: { $sum: "$playCount" } } },
-    ]);
+    // ✅ Lượt nghe theo tháng - dùng PlayHistory.playedAt
+    const playsCount = await PlayHistory.countDocuments({
+      playedAt: { $gte: startMonth, $lte: endMonth },
+    });
 
     months.push({
       month: label,
       songs: songsCount,
       users: usersCount,
-      plays: playsData[0]?.total || 0,
+      plays: playsCount, // ← Lượt nghe đúng tháng
     });
   }
 
   return months;
 };
 
-
-
-// ✅ getStats sau getMonthlyStats
+/* ═══════════════════════════════════════════
+   TỔNG HỢP STATS
+═══════════════════════════════════════════ */
 const getStats = async (req, res, next) => {
   try {
-    const totalUsers  = await User.countDocuments();
-    const totalSongs  = await Song.countDocuments();
-    const totalAdmins = await User.countDocuments({ role: "admin" });
-    const totalPlays  = await Song.aggregate([
-      { $group: { _id: null, total: { $sum: "$playCount" } } }
+    const [
+      totalUsers,
+      totalSongs,
+      totalAdmins,
+      totalPlays,   // ← Đếm từ PlayHistory
+      recentSongs,
+      recentUsers,
+      dailyStats,
+      monthlyStats,
+    ] = await Promise.all([
+      User.countDocuments(),
+      Song.countDocuments({ status: "approved" }),
+      User.countDocuments({ role: "admin" }),
+      PlayHistory.countDocuments(),         // ✅ Tổng lượt nghe từ PlayHistory
+      Song.find({ status: "approved" })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .populate("uploadedBy", "username"),
+      User.find()
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select("-password"),
+      getDailyStats(),
+      getMonthlyStats(),
     ]);
-    const recentSongs = await Song.find()
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .populate("uploadedBy", "username");
-    const recentUsers = await User.find()
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .select("-password");
-
-    const monthlyStats = await getMonthlyStats();
-    const dailyStats   = await getDailyStats(); // ✅ Thêm
 
     res.status(200).json({
       success: true,
@@ -267,11 +301,11 @@ const getStats = async (req, res, next) => {
         totalUsers,
         totalSongs,
         totalAdmins,
-        totalPlays: totalPlays[0]?.total || 0,
+        totalPlays,
         recentSongs,
         recentUsers,
+        dailyStats,
         monthlyStats,
-        dailyStats, // ✅ Thêm
       },
     });
   } catch (error) {

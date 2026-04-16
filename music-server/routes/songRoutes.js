@@ -2,53 +2,43 @@
 const express = require("express");
 const router  = express.Router();
 const {
-  getSongs,
-  getSong,
-  createSong,
-  updateSong,
-  deleteSong,
-  playSong,
-  likeSong,
-  getTopSongs,
-  getMySongs,
-  getAllUploadsAdmin,
-  approveSong,
-  rejectSong,
+  getSongs, getSong, createSong, updateSong,
+  deleteSong, playSong, likeSong, getTopSongs,
+  getMySongs, getAllUploadsAdmin, approveSong, rejectSong,
 } = require("../controllers/songController");
 
-// ✅ Dùng "admin" thay vì "isAdmin"
-const { protect, admin } = require("../middleware/auth");
+const { protect, admin }  = require("../middleware/auth");
 const { uploadSongFiles } = require("../middleware/upload");
+const { softDelete }      = require("../controllers/trashController");
 
-/* ─────────────────────────────────────
-   ADMIN routes - đặt TRƯỚC /:id
-───────────────────────────────────── */
-router.get(
-  "/admin/uploads",
-  protect, admin,        // ✅ sửa isAdmin → admin
-  getAllUploadsAdmin
-);
-router.patch(
-  "/admin/uploads/:id/approve",
-  protect, admin,        // ✅ sửa isAdmin → admin
-  approveSong
-);
-router.patch(
-  "/admin/uploads/:id/reject",
-  protect, admin,        // ✅ sửa isAdmin → admin
-  rejectSong
-);
+// ✅ optionalAuth
+const optionalAuth = async (req, res, next) => {
+  try {
+    const header = req.headers.authorization;
+    if (header?.startsWith("Bearer ")) {
+      const jwt     = require("jsonwebtoken");
+      const User    = require("../models/User");
+      const token   = header.split(" ")[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user      = await User.findById(decoded.id).select("-password");
+    }
+  } catch {
+    req.user = null;
+  }
+  next();
+};
 
-/* ─────────────────────────────────────
-   Static routes - đặt TRƯỚC /:id
-───────────────────────────────────── */
+/* ── ADMIN routes ── */
+router.get   ("/admin/uploads",             protect, admin, getAllUploadsAdmin);
+router.patch ("/admin/uploads/:id/approve", protect, admin, approveSong);
+router.patch ("/admin/uploads/:id/reject",  protect, admin, rejectSong);
+
+/* ── Static routes ── */
 router.get("/top",      getTopSongs);
 router.get("/my-songs", protect, getMySongs);
-router.get("/",         getSongs);
+router.get("/",         getSongs); // ✅ Sửa lại đúng
 
-/* ─────────────────────────────────────
-   User upload
-───────────────────────────────────── */
+/* ── Upload ── */
 router.post(
   "/",
   protect,
@@ -60,13 +50,12 @@ router.post(
   createSong
 );
 
-/* ─────────────────────────────────────
-   Dynamic /:id routes - đặt CUỐI
-───────────────────────────────────── */
-router.get   ("/:id",      getSong);
-router.put   ("/:id/play", playSong);
-router.put   ("/:id/like", protect, likeSong);
-router.delete("/:id",      protect, deleteSong);
+/* ── Dynamic /:id routes ── */
+router.get("/:id",             getSong);
+router.put("/:id/play",        optionalAuth, playSong); // ✅ optionalAuth
+router.put("/:id/like",        protect, likeSong);
+router.put("/:id/soft-delete", protect, softDelete);
+router.delete("/:id",          protect, deleteSong);
 router.put(
   "/:id",
   protect,

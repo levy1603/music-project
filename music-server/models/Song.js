@@ -28,46 +28,44 @@ const songSchema = new mongoose.Schema(
       ],
       default: "Pop",
     },
-    duration:   { type: Number,  default: 0 },
-    coverImage: { type: String,  default: "default-cover.jpg" },
-    audioFile:  { type: String,  required: [true, "Vui lòng upload file nhạc"] },
-    videoFile:  { type: String,  default: "" },
-    lyrics:     { type: String,  default: "" },
-    playCount:  { type: Number,  default: 0 },
-    likeCount:  { type: Number,  default: 0 },
+    duration:   { type: Number, default: 0 },
+    coverImage: { type: String, default: "default-cover.jpg" },
+    audioFile:  { type: String, required: [true, "Vui lòng upload file nhạc"] },
+    videoFile:  { type: String, default: "" },
+    lyrics:     { type: String, default: "" },
+    playCount:  { type: Number, default: 0 },
+    likeCount:  { type: Number, default: 0 },
     uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
 
-    // ✅ THÊM MỚI: Hệ thống duyệt bài
+    // Hệ thống duyệt bài
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],
       default: "pending",
     },
-    rejectReason: {
-      type: String,
-      default: "",
-    },
+    rejectReason: { type: String, default: "" },
     reviewedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
     },
-    reviewedAt: {
-      type: Date,
-      default: null,
-    },
+    reviewedAt: { type: Date, default: null },
+
+    // ✅ THÊM MỚI: Soft delete (2 fields này thôi)
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date,    default: null  },
   },
   { timestamps: true }
 );
 
 songSchema.index({ title: "text", artist: "text", album: "text" });
-
-// ✅ Index cho filter theo status (query nhanh hơn)
 songSchema.index({ status: 1, createdAt: -1 });
 songSchema.index({ uploadedBy: 1, status: 1 });
+// ✅ Index mới
+songSchema.index({ uploadedBy: 1, isDeleted: 1, createdAt: -1 });
 
 module.exports = mongoose.model("Song", songSchema);

@@ -19,12 +19,12 @@ import {
   FaChevronRight,
   FaVideo,
   FaAlignLeft,
-  FaPlus, // ✅ THÊM
+  FaPlus,
 } from "react-icons/fa";
 import songAPI from "../api/songAPI";
 import { useMusicContext } from "../context/MusicContext";
 import { useAuth } from "../context/AuthContext";
-import AddToPlaylistModal from "../components/playlist/AddToPlaylistModal"; // ✅ THÊM
+import AddToPlaylistModal from "../components/playlist/AddToPlaylistModal";
 import "./SongDetail.css";
 import getAvatarURL from "../utils/getAvatarURL";
 
@@ -44,15 +44,16 @@ const SongDetail = () => {
     currentTime,
   } = useMusicContext();
 
-  const [song, setSong]                   = useState(null);
-  const [loading, setLoading]             = useState(true);
-  const [error, setError]                 = useState("");
-  const [collapsed, setCollapsed]         = useState(false);
-  const [activeTab, setActiveTab]         = useState(null);
+  const [song, setSong]                       = useState(null);
+  const [loading, setLoading]                 = useState(true);
+  const [error, setError]                     = useState("");
+  const [collapsed, setCollapsed]             = useState(false);
+  const [activeTab, setActiveTab]             = useState(null);
+  const [miniActiveTabs, setMiniActiveTabs]   = useState(new Set());
   const [showLyricsModal, setShowLyricsModal] = useState(false);
-  const [newLyrics, setNewLyrics]         = useState("");
-  const [savingLyrics, setSavingLyrics]   = useState(false);
-  const [showAddModal, setShowAddModal]   = useState(false); // ✅ THÊM
+  const [newLyrics, setNewLyrics]             = useState("");
+  const [savingLyrics, setSavingLyrics]       = useState(false);
+  const [showAddModal, setShowAddModal]       = useState(false);
 
   const videoRef = useRef(null);
 
@@ -66,6 +67,7 @@ const SongDetail = () => {
         setSong(res.data);
         setNewLyrics(res.data.lyrics || "");
         setActiveTab(null);
+        setMiniActiveTabs(new Set());
       } catch (err) {
         setError("Không tìm thấy bài hát");
       } finally {
@@ -89,12 +91,8 @@ const SongDetail = () => {
     if (!video) return;
     const isCurrentSong = currentSong && currentSong._id === song?._id;
     if (!isCurrentSong) return;
-
-    if (isPlaying) {
-      video.play().catch(() => {});
-    } else {
-      video.pause();
-    }
+    if (isPlaying) video.play().catch(() => {});
+    else video.pause();
   }, [isPlaying, currentSong, song]);
 
   // ===== ĐỒNG BỘ VIDEO - seek =====
@@ -103,24 +101,33 @@ const SongDetail = () => {
     if (!video) return;
     const isCurrentSong = currentSong && currentSong._id === song?._id;
     if (!isCurrentSong) return;
-
     const diff = Math.abs(video.currentTime - currentTime);
-    if (diff > 2) {
-      video.currentTime = currentTime;
-    }
+    if (diff > 2) video.currentTime = currentTime;
   }, [currentTime, currentSong, song]);
 
-  const isCurrentSong       = currentSong && currentSong._id === song?._id;
-  const isThisSongPlaying   = isCurrentSong && isPlaying;
+  const isCurrentSong     = currentSong && currentSong._id === song?._id;
+  const isThisSongPlaying = isCurrentSong && isPlaying;
 
   const handlePlay = () => {
     if (isCurrentSong) togglePlay();
     else playSong(song);
   };
 
+  // Full view: chỉ 1 tab tại 1 thời điểm
   const handleTabToggle = (tab) => {
     if (tab === "video" && !videoURL) return;
     setActiveTab((prev) => (prev === tab ? null : tab));
+  };
+
+  // Mini view: nhiều tab cùng lúc
+  const handleMiniTabToggle = (tab) => {
+    if (tab === "video" && !videoURL) return;
+    setMiniActiveTabs((prev) => {
+      const next = new Set(prev);
+      if (next.has(tab)) next.delete(tab);
+      else next.add(tab);
+      return next;
+    });
   };
 
   const formatDate = (dateString) => {
@@ -188,128 +195,16 @@ const SongDetail = () => {
   return (
     <div className="song-detail-page">
 
-      {/* ===== NÚT QUAY LẠI ===== */}
-      <button onClick={() => navigate(-1)} className="back-button">
-        <FaArrowLeft />
-      </button>
+      {/* ===== CỘT TRÁI CỐ ĐỊNH: back-button + mini-view ===== */}
+      <div className="left-sidebar">
 
-      <div className={`song-detail-container ${collapsed ? "collapsed" : ""}`}>
+        {/* Nút quay lại - luôn hiển thị */}
+        <button onClick={() => navigate(-1)} className="back-button">
+          <FaArrowLeft />
+        </button>
 
-        {/* ===== PANEL TRÁI ===== */}
-        <div className={`song-info-section ${collapsed ? "is-collapsed" : ""}`}>
-          <button
-            className="collapse-btn"
-            onClick={() => setCollapsed(!collapsed)}
-            title={collapsed ? "Mở rộng" : "Thu gọn"}
-          >
-            {collapsed ? <FaChevronRight /> : <FaChevronLeft />}
-          </button>
-
-          <div className="panel-content">
-
-            {/* ===== ĐĨA NHẠC ===== */}
-            <div className="vinyl-wrapper">
-              <div className={`vinyl-needle ${isThisSongPlaying ? "playing" : ""}`}>
-                <div className="needle-base"></div>
-                <div className="needle-arm"></div>
-                <div className="needle-head"></div>
-              </div>
-              <div
-                className={`vinyl-disk ${isThisSongPlaying ? "spinning" : ""}`}
-                style={{ backgroundImage: `url(${getCoverURL(song)})` }}
-              >
-                <div className="vinyl-overlay"></div>
-                <div className="vinyl-grooves">
-                  <div className="vinyl-groove groove-1"></div>
-                  <div className="vinyl-groove groove-2"></div>
-                  <div className="vinyl-groove groove-3"></div>
-                  <div className="vinyl-groove groove-4"></div>
-                  <div className="vinyl-groove groove-5"></div>
-                  <div className="vinyl-groove groove-6"></div>
-                </div>
-                <div className="vinyl-center-ring">
-                  <div className="vinyl-hole"></div>
-                </div>
-                <div className="vinyl-shine"></div>
-              </div>
-            </div>
-
-            {/* ===== THÔNG TIN ===== */}
-            <div className="song-meta">
-              <h1 className="song-detail-title">{song.title}</h1>
-              <p className="song-detail-artist">{song.artist}</p>
-
-              <div className="song-stats">
-                <div className="stat-item">
-                  <FaCompactDisc />
-                  <span>{song.album || "Single"}</span>
-                </div>
-                <div className="stat-item">
-                  <FaMusic />
-                  <span>{song.genre || "Pop"}</span>
-                </div>
-                <div className="stat-item">
-                  <FaHeadphones />
-                  <span>{song.playCount || 0} lượt nghe</span>
-                </div>
-                <div className="stat-item">
-                  <FaCalendarAlt />
-                  <span>{formatDate(song.createdAt)}</span>
-                </div>
-              </div>
-
-              {/* ===== ACTIONS ===== */}
-              <div className="song-actions-detail">
-
-                {/* Nút Play */}
-                <button
-                  className={`action-btn play-btn-large ${isThisSongPlaying ? "playing" : ""}`}
-                  onClick={handlePlay}
-                >
-                  {isThisSongPlaying ? <FaPause /> : <FaPlay />}
-                </button>
-
-                {/* Nút Yêu thích */}
-                <button
-                  className={`action-btn fav-btn-large ${isFavorite(song._id) ? "liked" : ""}`}
-                  onClick={() => toggleFavorite(song._id)}
-                >
-                  {isFavorite(song._id) ? <FaHeart /> : <FaRegHeart />}
-                  {isFavorite(song._id) ? "Đã thích" : "Yêu thích"}
-                </button>
-
-                {/* ✅ Nút Thêm vào playlist */}
-                {isAuthenticated && (
-                  <button
-                    className="action-btn add-pl-btn"
-                    onClick={() => setShowAddModal(true)}
-                    title="Thêm vào playlist"
-                  >
-                    <FaPlus />
-                    Thêm vào playlist
-                  </button>
-                )}
-
-              </div>
-
-              {/* Uploader */}
-              {song.uploadedBy && (
-                <div className="uploader-info">
-                  <img
-                    src={getAvatarURL(song.uploadedBy.avatar, 30)}
-                    alt="uploader"
-                    className="uploader-avatar"
-                    onError={(e) => { e.target.src = "https://i.pravatar.cc/30"; }}
-                  />
-                  <span>
-                    Upload bởi <strong>{song.uploadedBy.username}</strong>
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ===== MINI VIEW KHI COLLAPSED ===== */}
+        {/* Mini view - chỉ hiện khi collapsed */}
+        {collapsed && (
           <div className="mini-view" onClick={() => setCollapsed(false)}>
             <div className={`mini-vinyl ${isThisSongPlaying ? "spinning" : ""}`}>
               <div
@@ -330,45 +225,186 @@ const SongDetail = () => {
               {isThisSongPlaying ? <FaPause /> : <FaPlay />}
             </button>
           </div>
-        </div>
+        )}
+      </div>
+
+      {/* ===== NỘI DUNG CHÍNH ===== */}
+      <div className={`song-detail-container ${collapsed ? "collapsed" : ""}`}>
+
+        {/* ===== PANEL TRÁI: ẩn khi collapsed ===== */}
+        {!collapsed && (
+          <div className="song-info-section">
+            <button
+              className="collapse-btn"
+              onClick={() => setCollapsed(true)}
+              title="Thu gọn"
+            >
+              <FaChevronLeft />
+            </button>
+
+            <div className="panel-content">
+
+              {/* ĐĨA NHẠC */}
+              <div className="vinyl-wrapper">
+                <div className={`vinyl-needle ${isThisSongPlaying ? "playing" : ""}`}>
+                  <div className="needle-base"></div>
+                  <div className="needle-arm"></div>
+                  <div className="needle-head"></div>
+                </div>
+                <div
+                  className={`vinyl-disk ${isThisSongPlaying ? "spinning" : ""}`}
+                  style={{ backgroundImage: `url(${getCoverURL(song)})` }}
+                >
+                  <div className="vinyl-overlay"></div>
+                  <div className="vinyl-grooves">
+                    <div className="vinyl-groove groove-1"></div>
+                    <div className="vinyl-groove groove-2"></div>
+                    <div className="vinyl-groove groove-3"></div>
+                    <div className="vinyl-groove groove-4"></div>
+                    <div className="vinyl-groove groove-5"></div>
+                    <div className="vinyl-groove groove-6"></div>
+                  </div>
+                  <div className="vinyl-center-ring">
+                    <div className="vinyl-hole"></div>
+                  </div>
+                  <div className="vinyl-shine"></div>
+                </div>
+              </div>
+
+              {/* THÔNG TIN */}
+              <div className="song-meta">
+                <h1 className="song-detail-title">{song.title}</h1>
+                <p className="song-detail-artist">{song.artist}</p>
+
+                <div className="song-stats">
+                  <div className="stat-item">
+                    <FaCompactDisc />
+                    <span>{song.album || "Single"}</span>
+                  </div>
+                  <div className="stat-item">
+                    <FaMusic />
+                    <span>{song.genre || "Pop"}</span>
+                  </div>
+                  <div className="stat-item">
+                    <FaHeadphones />
+                    <span>{song.playCount || 0} lượt nghe</span>
+                  </div>
+                  <div className="stat-item">
+                    <FaCalendarAlt />
+                    <span>{formatDate(song.createdAt)}</span>
+                  </div>
+                </div>
+
+                {/* ACTIONS */}
+                <div className="song-actions-detail">
+                  <button
+                    className={`action-btn play-btn-large ${isThisSongPlaying ? "playing" : ""}`}
+                    onClick={handlePlay}
+                  >
+                    {isThisSongPlaying ? <FaPause /> : <FaPlay />}
+                  </button>
+
+                  <button
+                    className={`action-btn fav-btn-large ${isFavorite(song._id) ? "liked" : ""}`}
+                    onClick={() => toggleFavorite(song._id)}
+                  >
+                    {isFavorite(song._id) ? <FaHeart /> : <FaRegHeart />}
+                    {isFavorite(song._id) ? "Đã thích" : "Yêu thích"}
+                  </button>
+
+                  {isAuthenticated && (
+                    <button
+                      className="action-btn add-pl-btn"
+                      onClick={() => setShowAddModal(true)}
+                    >
+                      <FaPlus /> Thêm vào playlist
+                    </button>
+                  )}
+                </div>
+
+                {/* Uploader */}
+                {song.uploadedBy && (
+                  <div className="uploader-info">
+                    <img
+                      src={getAvatarURL(song.uploadedBy.avatar, 30)}
+                      alt="uploader"
+                      className="uploader-avatar"
+                      onError={(e) => { e.target.src = "https://i.pravatar.cc/30"; }}
+                    />
+                    <span>
+                      Upload bởi <strong>{song.uploadedBy.username}</strong>
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ===== PANEL PHẢI ===== */}
         <div className="song-right-section">
 
-          {/* ===== 2 ICON DỌC BÊN TRÁI ===== */}
+          {/* ICON TABS */}
           <div className="tab-icon-switcher">
-            <button
-              className={`tab-icon-btn ${activeTab === "lyrics" ? "active" : ""}`}
-              onClick={() => handleTabToggle("lyrics")}
-              title={activeTab === "lyrics" ? "Đóng lời bài hát" : "Lời bài hát"}
-            >
-              <FaAlignLeft />
-            </button>
 
-            <button
-              className={`tab-icon-btn ${activeTab === "video" ? "active" : ""} ${!videoURL ? "disabled" : ""}`}
-              onClick={() => handleTabToggle("video")}
-              title={
-                !videoURL
-                  ? "Chưa có video"
-                  : activeTab === "video"
-                  ? "Đóng video"
-                  : "Video"
-              }
-            >
-              <FaVideo />
-              {isThisSongPlaying && activeTab === "video" && videoURL && (
-                <span className="playing-dot-icon" />
-              )}
-              {!videoURL && <span className="no-video-dot" />}
-            </button>
+            {/* Full view: 1 tab tại 1 lúc */}
+            {!collapsed && (
+              <>
+                <button
+                  className={`tab-icon-btn ${activeTab === "lyrics" ? "active" : ""}`}
+                  onClick={() => handleTabToggle("lyrics")}
+                  title={activeTab === "lyrics" ? "Đóng lời bài hát" : "Lời bài hát"}
+                >
+                  <FaAlignLeft />
+                </button>
+                <button
+                  className={`tab-icon-btn ${activeTab === "video" ? "active" : ""} ${!videoURL ? "disabled" : ""}`}
+                  onClick={() => handleTabToggle("video")}
+                  title={
+                    !videoURL ? "Chưa có video"
+                    : activeTab === "video" ? "Đóng video"
+                    : "Video"
+                  }
+                >
+                  <FaVideo />
+                  {isThisSongPlaying && activeTab === "video" && videoURL && (
+                    <span className="playing-dot-icon" />
+                  )}
+                  {!videoURL && <span className="no-video-dot" />}
+                </button>
+              </>
+            )}
+
+            {/* ✅ Mini view: nhiều tab cùng lúc */}
+            {collapsed && (
+              <>
+                <button
+                  className={`tab-icon-btn ${miniActiveTabs.has("lyrics") ? "active" : ""}`}
+                  onClick={() => handleMiniTabToggle("lyrics")}
+                  title="Lời bài hát"
+                >
+                  <FaAlignLeft />
+                </button>
+                <button
+                  className={`tab-icon-btn ${miniActiveTabs.has("video") ? "active" : ""} ${!videoURL ? "disabled" : ""}`}
+                  onClick={() => handleMiniTabToggle("video")}
+                  title={!videoURL ? "Chưa có video" : "Video"}
+                >
+                  <FaVideo />
+                  {isThisSongPlaying && miniActiveTabs.has("video") && videoURL && (
+                    <span className="playing-dot-icon" />
+                  )}
+                  {!videoURL && <span className="no-video-dot" />}
+                </button>
+              </>
+            )}
           </div>
 
-          {/* ===== TAB CONTENT ===== */}
-          {activeTab !== null && (
+          {/* ===== FULL VIEW: 1 panel ===== */}
+          {!collapsed && activeTab !== null && (
             <div className="tab-content">
 
-              {/* --- LYRICS --- */}
+              {/* LYRICS */}
               {activeTab === "lyrics" && (
                 <div className="song-lyrics-section">
                   <div className="lyrics-header">
@@ -399,7 +435,7 @@ const SongDetail = () => {
                 </div>
               )}
 
-              {/* --- VIDEO --- */}
+              {/* VIDEO */}
               {activeTab === "video" && (
                 <div className="song-video-section">
                   {videoURL ? (
@@ -431,6 +467,84 @@ const SongDetail = () => {
 
             </div>
           )}
+
+          {/* ===== MINI VIEW: nhiều panel cạnh nhau ===== */}
+          {collapsed && miniActiveTabs.size > 0 && (
+            <div className={`mini-panels-container ${miniActiveTabs.size === 2 ? "two-panels" : ""}`}>
+
+              {/* LYRICS PANEL */}
+              {miniActiveTabs.has("lyrics") && (
+                <div className="tab-content mini-panel">
+                  <div className="song-lyrics-section">
+                    <div className="lyrics-header">
+                      <h2>🎤 Lời bài hát</h2>
+                      {isAuthenticated && (
+                        <button
+                          className="edit-lyrics-btn"
+                          onClick={(e) => { e.stopPropagation(); openLyricsModal(); }}
+                        >
+                          <FaEdit /> {song.lyrics ? "Sửa lời" : "Thêm lời"}
+                        </button>
+                      )}
+                    </div>
+                    <div className="lyrics-content">
+                      {song.lyrics ? (
+                        <pre className="lyrics-text">{song.lyrics}</pre>
+                      ) : (
+                        <div className="no-lyrics">
+                          <FaMusic className="no-lyrics-icon" />
+                          <p>Chưa có lời bài hát</p>
+                          {isAuthenticated ? (
+                            <button
+                              className="add-lyrics-btn"
+                              onClick={(e) => { e.stopPropagation(); openLyricsModal(); }}
+                            >
+                              <FaEdit /> Thêm lời bài hát
+                            </button>
+                          ) : (
+                            <p className="login-hint">Đăng nhập để thêm lời bài hát</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* VIDEO PANEL */}
+              {miniActiveTabs.has("video") && (
+                <div className="tab-content mini-panel">
+                  <div className="song-video-section">
+                    {videoURL ? (
+                      <div className="video-player-wrapper">
+                        <video
+                          ref={videoRef}
+                          className="song-video-player"
+                          src={videoURL}
+                          poster={getCoverURL(song)}
+                          preload="metadata"
+                          muted
+                          playsInline
+                        />
+                        <div className="video-overlay" onClick={handlePlay}>
+                          <div className={`video-play-icon ${isThisSongPlaying ? "hide" : ""}`}>
+                            <FaPlay />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="no-video">
+                        <FaVideo className="no-video-icon" />
+                        <p>Bài hát này chưa có video</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+            </div>
+          )}
+
         </div>
       </div>
 
@@ -485,7 +599,7 @@ const SongDetail = () => {
         </div>
       )}
 
-      {/* ✅ MODAL THÊM VÀO PLAYLIST ===== */}
+      {/* ===== MODAL THÊM VÀO PLAYLIST ===== */}
       {showAddModal && (
         <AddToPlaylistModal
           song={song}
