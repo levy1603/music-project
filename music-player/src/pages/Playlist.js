@@ -1,30 +1,36 @@
-// src/pages/Playlist.js
-import React, { useMemo } from "react";
+import React, { useMemo, useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import SongList from "../components/SongList";
+import ConfirmModal from "../components/common/ConfirmModal";
 import { useMusicContext } from "../context/MusicContext";
 import { useAuth } from "../context/AuthContext";
 import { FaHistory, FaTrash, FaMusic } from "react-icons/fa";
 import "./Playlist.css";
 
 const Playlist = () => {
-  const { songs, listenedSongIds, playSong } = useMusicContext();
-  const { user, isAuthenticated } = useAuth();
+  const { songs, listenedSongIds, clearListened } = useMusicContext();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // ✅ Lọc các bài đã nghe, giữ thứ tự mới nhất lên đầu
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
   const listenedSongs = useMemo(() => {
-    return listenedSongIds
-      .map((id) => songs.find((s) => s._id === id))
-      .filter(Boolean); // lọc bỏ undefined
+    const songMap = new Map(songs.map((song) => [song._id, song]));
+    return listenedSongIds.map((id) => songMap.get(id)).filter(Boolean);
   }, [listenedSongIds, songs]);
 
-  // ✅ Xóa lịch sử
-  const handleClearHistory = () => {
-    if (!window.confirm("Xóa toàn bộ lịch sử nghe?")) return;
-    localStorage.removeItem(`listened_${user?._id}`);
-    window.location.reload(); // reload để reset state
-  };
+  const handleOpenClearConfirm = useCallback(() => {
+    setShowClearConfirm(true);
+  }, []);
+
+  const handleCloseClearConfirm = useCallback(() => {
+    setShowClearConfirm(false);
+  }, []);
+
+  const handleConfirmClearHistory = useCallback(() => {
+    clearListened();
+    setShowClearConfirm(false);
+  }, [clearListened]);
 
   if (!isAuthenticated) {
     return (
@@ -33,6 +39,7 @@ const Playlist = () => {
           <FaMusic className="playlist-empty-icon" />
           <p>Vui lòng đăng nhập để xem lịch sử nghe</p>
           <button
+            type="button"
             className="playlist-login-btn"
             onClick={() => navigate("/login")}
           >
@@ -50,6 +57,7 @@ const Playlist = () => {
           <FaHistory className="playlist-empty-icon" />
           <p>Bạn chưa nghe bài hát nào</p>
           <button
+            type="button"
             className="playlist-login-btn"
             onClick={() => navigate("/")}
           >
@@ -61,32 +69,47 @@ const Playlist = () => {
   }
 
   return (
-    <div className="page-content">
-      {/* ===== HEADER ===== */}
-      <div className="playlist-header">
-        <div className="playlist-title">
-          <FaHistory className="playlist-title-icon" />
-          <div>
-            <h2>Lịch sử nghe</h2>
-            <span>{listenedSongs.length} bài hát</span>
+    <>
+      <div className="page-content">
+        <div className="playlist-header">
+          <div className="playlist-title">
+            <FaHistory className="playlist-title-icon" />
+            <div>
+              <h2>Lịch sử nghe</h2>
+              <span>{listenedSongs.length} bài hát</span>
+            </div>
           </div>
+
+          <button
+            type="button"
+            className="playlist-clear-btn"
+            onClick={handleOpenClearConfirm}
+            title="Xóa lịch sử"
+          >
+            <FaTrash /> Xóa lịch sử
+          </button>
         </div>
 
-        <button
-          className="playlist-clear-btn"
-          onClick={handleClearHistory}
-          title="Xóa lịch sử"
-        >
-          <FaTrash /> Xóa lịch sử
-        </button>
+        <SongList
+          songs={listenedSongs}
+          title=""
+          source="history"
+          queue={listenedSongs}
+          emptyText="Bạn chưa có bài hát trong lịch sử nghe"
+        />
       </div>
 
-      {/* ===== DANH SÁCH ===== */}
-      <SongList
-        songs={listenedSongs}
-        title=""
+      <ConfirmModal
+        open={showClearConfirm}
+        title="Xóa lịch sử nghe"
+        message="Bạn có chắc muốn xóa toàn bộ lịch sử nghe không? Hành động này không thể hoàn tác."
+        confirmText="Xóa lịch sử"
+        cancelText="Hủy"
+        confirmVariant="danger"
+        onConfirm={handleConfirmClearHistory}
+        onClose={handleCloseClearConfirm}
       />
-    </div>
+    </>
   );
 };
 

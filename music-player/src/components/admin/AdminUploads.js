@@ -1,19 +1,31 @@
-// src/components/admin/AdminUploads.js
-import React, { useState, useEffect, useCallback, useRef } from "react"; // 👈 thêm useRef
+﻿// src/components/admin/AdminUploads.js
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   FaCloudUploadAlt, FaMusic, FaCheckCircle,
   FaTimesCircle, FaTrash, FaSearch, FaFilter,
   FaEye, FaClock, FaUser, FaSpinner, FaSync,
-  FaExclamationTriangle, FaVideo, FaBell,    // 👈 thêm FaBell
+  FaExclamationTriangle, FaVideo, FaBell,
+  FaMicrophone, FaTag, FaCalendarAlt,
+  FaAlignLeft,
 } from "react-icons/fa";
 import songAPI from "../../api/songAPI";
+import ConfirmModal from "../common/ConfirmModal";
+import ToastMessage from "../common/ToastMessage";
 import "./AdminUploads.css";
 
-/* ── Constants & Helpers giữ nguyên ── */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   CONSTANTS & HELPERS
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 const STATUS_CONFIG = {
-  pending:  { label: "Chờ duyệt", className: "badge-pending",  icon: <FaClock /> },
-  approved: { label: "Đã duyệt",  className: "badge-approved", icon: <FaCheckCircle /> },
-  rejected: { label: "Từ chối",   className: "badge-rejected", icon: <FaTimesCircle /> },
+  pending:  { label: "Chá» duyá»‡t", className: "badge-pending",  icon: <FaClock /> },
+  approved: { label: "ÄÃ£ duyá»‡t",  className: "badge-approved", icon: <FaCheckCircle /> },
+  rejected: { label: "Tá»« chá»‘i",   className: "badge-rejected", icon: <FaTimesCircle /> },
+};
+
+const INITIAL_TOAST = {
+  open: false,
+  type: "info",
+  message: "",
 };
 
 const formatDuration = (seconds) => {
@@ -49,13 +61,10 @@ const getVideoURL = (song) => {
   return `http://localhost:5000/uploads/videos/${song.videoFile}`;
 };
 
-/* ═══════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    MAIN COMPONENT
-═══════════════════════════════════════ */
-const AdminUploads = ({
-  highlightSongId,   // 👈 THÊM
-  onClearHighlight,  // 👈 THÊM
-}) => {
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+const AdminUploads = ({ highlightSongId, onClearHighlight }) => {
   const [uploads,       setUploads]       = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [error,         setError]         = useState("");
@@ -65,20 +74,29 @@ const AdminUploads = ({
   const [actionLoading, setActionLoading] = useState(null);
   const [rejectModal,   setRejectModal]   = useState(null);
   const [rejectReason,  setRejectReason]  = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [toast,         setToast]         = useState(INITIAL_TOAST);
   const [stats,         setStats]         = useState({
     total: 0, pending: 0, approved: 0, rejected: 0,
   });
 
-  // 👈 Ref để scroll tới bài được highlight
   const highlightRowRef = useRef(null);
 
-  /* ── Fetch data ── */
+  const showToast = useCallback((type, message) => {
+    setToast({ open: true, type, message });
+  }, []);
+
+  const closeToast = useCallback(() => {
+    setToast(INITIAL_TOAST);
+  }, []);
+
+  /* â”€â”€ Fetch â”€â”€ */
   const fetchUploads = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const params = filterStatus !== "all" ? { status: filterStatus } : {};
-      const res    = await songAPI.adminGetAllUploads(params);
+      const params    = filterStatus !== "all" ? { status: filterStatus } : {};
+      const res       = await songAPI.adminGetAllUploads(params);
       const data      = res.data?.data  || res.data || [];
       const statsData = res.data?.stats || {};
 
@@ -90,8 +108,8 @@ const AdminUploads = ({
         rejected: statsData.rejected || 0,
       });
     } catch (err) {
-      console.error("Lỗi fetch uploads:", err);
-      setError("Không thể tải danh sách upload. Vui lòng thử lại.");
+      console.error("Lá»—i fetch uploads:", err);
+      setError("KhÃ´ng thá»ƒ táº£i danh sÃ¡ch upload. Vui lÃ²ng thá»­ láº¡i.");
     } finally {
       setLoading(false);
     }
@@ -99,66 +117,49 @@ const AdminUploads = ({
 
   useEffect(() => { fetchUploads(); }, [fetchUploads]);
 
-  /* ════════════════════════════════════════
-     👈 Auto scroll + filter khi có highlight
-  ════════════════════════════════════════ */
+  /* â”€â”€ Auto scroll khi cÃ³ highlight â”€â”€ */
   useEffect(() => {
     if (!highlightSongId || loading) return;
-
-    // Nếu đang filter không phải "all" hoặc "pending"
-    // → reset về "all" để bài highlight hiện ra
     const targetSong = uploads.find((u) => u._id === highlightSongId);
     if (targetSong && filterStatus !== "all" && filterStatus !== targetSong.status) {
       setFilterStatus("all");
     }
-
-    // Scroll sau khi render
     const timer = setTimeout(() => {
-      if (highlightRowRef.current) {
-        highlightRowRef.current.scrollIntoView({
-          behavior: "smooth",
-          block:    "center",
-        });
-      }
+      highlightRowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 300);
-
     return () => clearTimeout(timer);
   }, [highlightSongId, loading, uploads, filterStatus]);
 
-  /* ── Client-side search ── */
+  /* â”€â”€ Filter â”€â”€ */
   const filtered = uploads.filter((u) => {
     if (!searchTerm.trim()) return true;
     const term = searchTerm.toLowerCase();
     return (
-      u.title?.toLowerCase().includes(term)  ||
-      u.artist?.toLowerCase().includes(term) ||
-      u.uploadedBy?.username?.toLowerCase().includes(term)
+      u.title?.toLowerCase().includes(term)               ||
+      u.artist?.toLowerCase().includes(term)              ||
+      u.featuring?.toLowerCase().includes(term)           ||
+      u.uploadedBy?.username?.toLowerCase().includes(term)||
+      u.tags?.some((t) => t.toLowerCase().includes(term))
     );
   });
 
-  /* ── Actions ── */
+  /* Actions */
   const handleApprove = useCallback(async (id) => {
     setActionLoading(id);
     try {
-      const res     = await songAPI.adminApproveSong(id);
+      const res = await songAPI.adminApproveSong(id);
       const updated = res.data?.data || res.data;
-      setUploads((prev) =>
-        prev.map((u) => (u._id === id ? { ...u, ...updated } : u))
-      );
-      setStats((prev) => ({
-        ...prev,
-        approved: prev.approved + 1,
-        pending:  Math.max(0, prev.pending - 1),
-      }));
-      if (selected?._id === id) setSelected((s) => ({ ...s, ...updated }));
-      // Clear highlight sau khi duyệt
+      setUploads((prev) => prev.map((u) => (u._id === id ? { ...u, ...updated } : u)));
+      setStats((prev) => ({ ...prev, approved: prev.approved + 1, pending: Math.max(0, prev.pending - 1) }));
+      if (selected?._id === id) setSelected((prev) => ({ ...prev, ...updated }));
       if (id === highlightSongId) onClearHighlight?.();
+      showToast("success", "Da duyet bai hat.");
     } catch (err) {
-      alert(err.response?.data?.message || "Duyệt thất bại!");
+      showToast("error", err.response?.data?.message || "Duyet that bai!");
     } finally {
       setActionLoading(null);
     }
-  }, [selected, highlightSongId, onClearHighlight]);
+  }, [selected, highlightSongId, onClearHighlight, showToast]);
 
   const openRejectModal = (upload) => {
     setRejectModal({ id: upload._id, title: upload.title });
@@ -171,56 +172,58 @@ const AdminUploads = ({
     setActionLoading(id);
     setRejectModal(null);
     try {
-      const res     = await songAPI.adminRejectSong(id, rejectReason);
+      const res = await songAPI.adminRejectSong(id, rejectReason);
       const updated = res.data?.data || res.data;
-      setUploads((prev) =>
-        prev.map((u) => (u._id === id ? { ...u, ...updated } : u))
-      );
-      setStats((prev) => ({
-        ...prev,
-        rejected: prev.rejected + 1,
-        pending:  Math.max(0, prev.pending - 1),
-      }));
-      if (selected?._id === id) setSelected((s) => ({ ...s, ...updated }));
-      // Clear highlight sau khi từ chối
+      setUploads((prev) => prev.map((u) => (u._id === id ? { ...u, ...updated } : u)));
+      setStats((prev) => ({ ...prev, rejected: prev.rejected + 1, pending: Math.max(0, prev.pending - 1) }));
+      if (selected?._id === id) setSelected((prev) => ({ ...prev, ...updated }));
       if (id === highlightSongId) onClearHighlight?.();
+      showToast("success", "Da tu choi bai hat.");
     } catch (err) {
-      alert(err.response?.data?.message || "Từ chối thất bại!");
+      showToast("error", err.response?.data?.message || "Tu choi that bai!");
     } finally {
       setActionLoading(null);
       setRejectReason("");
     }
   };
 
-  const handleDelete = useCallback(async (id) => {
-    if (!window.confirm("Bạn chắc chắn muốn xoá upload này?")) return;
+  const handleDelete = useCallback((id) => {
+    const song = uploads.find((item) => item._id === id);
+    setDeleteConfirm({
+      id,
+      title: song?.title || "upload nay",
+    });
+  }, [uploads]);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteConfirm) return;
+
+    const { id } = deleteConfirm;
     setActionLoading(id);
     try {
       await songAPI.adminDeleteSong(id);
       setUploads((prev) => prev.filter((u) => u._id !== id));
       setStats((prev) => {
         const song = uploads.find((u) => u._id === id);
-        return {
-          ...prev,
-          total: Math.max(0, prev.total - 1),
-          [song?.status]: Math.max(0, prev[song?.status] - 1),
-        };
+        return { ...prev, total: Math.max(0, prev.total - 1), [song?.status]: Math.max(0, prev[song?.status] - 1) };
       });
-      if (selected?._id   === id) setSelected(null);
+      if (selected?._id === id) setSelected(null);
       if (highlightSongId === id) onClearHighlight?.();
+      setDeleteConfirm(null);
+      showToast("success", "Da xoa upload.");
     } catch (err) {
-      alert(err.response?.data?.message || "Xoá thất bại!");
+      showToast("error", err.response?.data?.message || "Xoa that bai!");
     } finally {
       setActionLoading(null);
     }
-  }, [selected, uploads, highlightSongId, onClearHighlight]);
+  }, [deleteConfirm, selected, uploads, highlightSongId, onClearHighlight, showToast]);
 
-  /* ── Loading / Error ── */
+  /* Loading / Error */
   if (loading) {
     return (
       <div className="au-loading">
         <div className="au-spinner" />
-        <span>Đang tải danh sách upload...</span>
+        <span>Äang táº£i danh sÃ¡ch upload...</span>
       </div>
     );
   }
@@ -231,60 +234,53 @@ const AdminUploads = ({
         <FaExclamationTriangle />
         <p>{error}</p>
         <button className="au-retry-btn" onClick={fetchUploads}>
-          <FaSync /> Thử lại
+          <FaSync /> Thá»­ láº¡i
         </button>
       </div>
     );
   }
 
-  /* ══════════════════════════════════════
-     RENDER MAIN
-  ══════════════════════════════════════ */
+  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     RENDER
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
   return (
     <div className="au-wrapper">
 
-      {/* ── HEADER ── */}
+      {/* Header */}
       <div className="au-header">
         <div className="au-header-left">
           <FaCloudUploadAlt className="au-header-icon" />
           <div>
-            <h1 className="au-title">Quản lý Upload</h1>
-            <p className="au-subtitle">Duyệt và quản lý các bài hát được tải lên</p>
+            <h1 className="au-title">Quáº£n lÃ½ Upload</h1>
+            <p className="au-subtitle">Duyá»‡t vÃ  quáº£n lÃ½ cÃ¡c bÃ i hÃ¡t Ä‘Æ°á»£c táº£i lÃªn</p>
           </div>
         </div>
-        <button className="au-refresh-btn" onClick={fetchUploads} title="Làm mới">
-          <FaSync /> Làm mới
+        <button className="au-refresh-btn" onClick={fetchUploads}>
+          <FaSync /> LÃ m má»›i
         </button>
       </div>
 
-      {/* ════════════════════════════════════
-          👈 BANNER HIGHLIGHT từ notification
-      ════════════════════════════════════ */}
+      {/* Highlight banner */}
       {highlightSongId && (
         <div className="au-highlight-banner">
           <div className="au-highlight-banner-left">
             <FaBell className="au-highlight-bell" />
             <span>
-              Bạn đang xem bài hát từ thông báo —
-              <strong> cuộn xuống để tìm bài được đánh dấu</strong>
+              Báº¡n Ä‘ang xem bÃ i hÃ¡t tá»« thÃ´ng bÃ¡o â€”
+              <strong> cuá»™n xuá»‘ng Ä‘á»ƒ tÃ¬m bÃ i Ä‘Æ°á»£c Ä‘Ã¡nh dáº¥u</strong>
             </span>
           </div>
-          <button
-            className="au-highlight-banner-close"
-            onClick={onClearHighlight}
-          >
-            ✕
-          </button>
+          <button className="au-highlight-banner-close" onClick={onClearHighlight}>âœ•</button>
         </div>
       )}
 
-      {/* ── STATS CARDS ── */}
+      {/* Stats */}
       <div className="au-stats-grid">
         {[
-          { label: "Tổng upload", value: stats.pending + stats.approved + stats.rejected, color: "blue",   icon: <FaCloudUploadAlt /> },
-          { label: "Chờ duyệt",   value: stats.pending,                                  color: "yellow", icon: <FaClock /> },
-          { label: "Đã duyệt",    value: stats.approved,                                 color: "green",  icon: <FaCheckCircle /> },
-          { label: "Từ chối",     value: stats.rejected,                                 color: "red",    icon: <FaTimesCircle /> },
+          { label: "Tá»•ng upload", value: stats.pending + stats.approved + stats.rejected, color: "blue",   icon: <FaCloudUploadAlt /> },
+          { label: "Chá» duyá»‡t",   value: stats.pending,                                  color: "yellow", icon: <FaClock /> },
+          { label: "ÄÃ£ duyá»‡t",    value: stats.approved,                                 color: "green",  icon: <FaCheckCircle /> },
+          { label: "Tá»« chá»‘i",     value: stats.rejected,                                 color: "red",    icon: <FaTimesCircle /> },
         ].map((card) => (
           <div key={card.label} className={`au-stat-card au-stat-${card.color}`}>
             <div className="au-stat-icon">{card.icon}</div>
@@ -296,28 +292,28 @@ const AdminUploads = ({
         ))}
       </div>
 
-      {/* ── TOOLBAR ── */}
+      {/* Toolbar */}
       <div className="au-toolbar">
         <div className="au-search-box">
           <FaSearch className="au-search-icon" />
           <input
             type="text"
-            placeholder="Tìm theo tên bài, nghệ sĩ, người upload..."
+            placeholder="TÃ¬m theo tÃªn bÃ i, nghá»‡ sÄ©, tag, ngÆ°á»i upload..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="au-search-input"
           />
           {searchTerm && (
-            <button className="au-search-clear" onClick={() => setSearchTerm("")}>✕</button>
+            <button className="au-search-clear" onClick={() => setSearchTerm("")}>âœ•</button>
           )}
         </div>
         <div className="au-filter-group">
           <FaFilter className="au-filter-icon" />
           {[
-            { key: "all",      label: "Tất cả"   },
-            { key: "pending",  label: "Chờ duyệt" },
-            { key: "approved", label: "Đã duyệt"  },
-            { key: "rejected", label: "Từ chối"   },
+            { key: "all",      label: "Táº¥t cáº£"    },
+            { key: "pending",  label: "Chá» duyá»‡t" },
+            { key: "approved", label: "ÄÃ£ duyá»‡t"  },
+            { key: "rejected", label: "Tá»« chá»‘i"   },
           ].map((f) => (
             <button
               key={f.key}
@@ -333,28 +329,28 @@ const AdminUploads = ({
         </div>
       </div>
 
-      {/* ── TABLE ── */}
+      {/* Table */}
       <div className="au-table-wrapper">
         {filtered.length === 0 ? (
           <div className="au-empty">
             <FaCloudUploadAlt />
             <p>
               {searchTerm
-                ? `Không tìm thấy kết quả cho "${searchTerm}"`
-                : "Không có upload nào"}
+                ? `KhÃ´ng tÃ¬m tháº¥y káº¿t quáº£ cho "${searchTerm}"`
+                : "KhÃ´ng cÃ³ upload nÃ o"}
             </p>
           </div>
         ) : (
           <table className="au-table">
             <thead>
               <tr>
-                <th>Bài hát</th>
-                <th>Người upload</th>
-                <th>Thể loại</th>
-                <th>Thời lượng</th>
-                <th>Ngày upload</th>
-                <th>Trạng thái</th>
-                <th>Thao tác</th>
+                <th>BÃ i hÃ¡t</th>
+                <th>NgÆ°á»i upload</th>
+                <th>Thá»ƒ loáº¡i / NÄƒm</th>
+                <th>Thá»i lÆ°á»£ng</th>
+                <th>NgÃ y upload</th>
+                <th>Tráº¡ng thÃ¡i</th>
+                <th>Thao tÃ¡c</th>
               </tr>
             </thead>
             <tbody>
@@ -362,48 +358,75 @@ const AdminUploads = ({
                 const statusCfg     = STATUS_CONFIG[upload.status] || STATUS_CONFIG.pending;
                 const isLoading     = actionLoading === upload._id;
                 const coverURL      = getImageURL(upload);
-                const isHighlighted = upload._id === highlightSongId; // 👈
+                const isHighlighted = upload._id === highlightSongId;
 
                 return (
                   <tr
                     key={upload._id}
-                    // 👈 Gán ref cho row được highlight
                     ref={isHighlighted ? highlightRowRef : null}
-                    className={`
-                      au-table-row
-                      ${isLoading     ? "au-row-loading"    : ""}
-                      ${selected?._id === upload._id ? "au-row-selected"  : ""}
+                    className={`au-table-row
+                      ${isLoading     ? "au-row-loading"     : ""}
+                      ${selected?._id === upload._id ? "au-row-selected"   : ""}
                       ${isHighlighted ? "au-row-highlighted" : ""}
                     `}
                   >
-                    {/* Bài hát */}
+                    {/* BÃ i hÃ¡t */}
                     <td>
                       <div className="au-song-cell">
                         <div className="au-cover">
                           {coverURL ? (
-                            <img
-                              src={coverURL}
-                              alt={upload.title}
-                              onError={(e) => { e.target.style.display = "none"; }}
-                            />
+                            <img src={coverURL} alt={upload.title}
+                              onError={(e) => { e.target.style.display = "none"; }} />
                           ) : (
                             <FaMusic className="au-cover-placeholder" />
                           )}
                         </div>
                         <div className="au-song-info">
-                          {/* 👈 Icon chuông nếu là bài từ notification */}
                           {isHighlighted && (
                             <span className="au-highlighted-tag">
-                              <FaBell /> Từ thông báo
+                              <FaBell /> Tá»« thÃ´ng bÃ¡o
                             </span>
                           )}
                           <span className="au-song-title">{upload.title}</span>
-                          <span className="au-song-artist">{upload.artist}</span>
+
+                          {/* âœ… Featuring */}
+                          <span className="au-song-artist">
+                            {upload.artist}
+                            {upload.featuring && (
+                              <span className="au-featuring"> ft. {upload.featuring}</span>
+                            )}
+                          </span>
+
+                          {/* âœ… Tags */}
+                          {upload.tags?.length > 0 && (
+                            <div className="au-song-tags">
+                              {upload.tags.slice(0, 3).map((tag) => (
+                                <span key={tag} className="au-song-tag">#{tag}</span>
+                              ))}
+                              {upload.tags.length > 3 && (
+                                <span className="au-song-tag-more">+{upload.tags.length - 3}</span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* âœ… Badges: LRC + Video */}
+                          <div className="au-song-badges">
+                            {upload.lrc && (
+                              <span className="au-badge-mini au-badge-lrc">
+                                <FaMicrophone /> LRC
+                              </span>
+                            )}
+                            {upload.videoFile && (
+                              <span className="au-badge-mini au-badge-video">
+                                <FaVideo /> MV
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </td>
 
-                    {/* Người upload */}
+                    {/* NgÆ°á»i upload */}
                     <td>
                       <div className="au-uploader-cell">
                         <FaUser className="au-uploader-icon" />
@@ -411,20 +434,23 @@ const AdminUploads = ({
                       </div>
                     </td>
 
-                    {/* Thể loại */}
+                    {/* âœ… Thá»ƒ loáº¡i + NgÃ´n ngá»¯ */}
                     <td>
-                      <span className="au-genre-tag">{upload.genre || "N/A"}</span>
+                      <div className="au-genre-lang">
+                        <span className="au-genre-tag">{upload.genre || "N/A"}</span>
+                        {upload.releaseYear && (
+                          <span className="au-year-tag">{upload.releaseYear}</span>
+                        )}
+                      </div>
                     </td>
 
-                    {/* Thời lượng */}
-                    <td className="au-duration">
-                      {formatDuration(upload.duration)}
-                    </td>
+                    {/* Thá»i lÆ°á»£ng */}
+                    <td className="au-duration">{formatDuration(upload.duration)}</td>
 
-                    {/* Ngày upload */}
+                    {/* NgÃ y upload */}
                     <td className="au-date">{formatDate(upload.createdAt)}</td>
 
-                    {/* Trạng thái */}
+                    {/* Tráº¡ng thÃ¡i */}
                     <td>
                       <span className={`au-badge ${statusCfg.className}`}>
                         {statusCfg.icon} {statusCfg.label}
@@ -434,13 +460,13 @@ const AdminUploads = ({
                       )}
                     </td>
 
-                    {/* Thao tác */}
+                    {/* Thao tÃ¡c */}
                     <td>
                       <div className="au-actions">
                         <button
                           className="au-btn au-btn-view"
                           onClick={() => setSelected(upload)}
-                          title="Xem chi tiết"
+                          title="Xem chi tiáº¿t"
                           disabled={isLoading}
                         >
                           {isLoading ? <FaSpinner className="au-spin" /> : <FaEye />}
@@ -449,7 +475,7 @@ const AdminUploads = ({
                           <button
                             className="au-btn au-btn-approve"
                             onClick={() => handleApprove(upload._id)}
-                            title="Duyệt bài"
+                            title="Duyá»‡t bÃ i"
                             disabled={isLoading}
                           >
                             <FaCheckCircle />
@@ -459,7 +485,7 @@ const AdminUploads = ({
                           <button
                             className="au-btn au-btn-reject"
                             onClick={() => openRejectModal(upload)}
-                            title="Từ chối"
+                            title="Tá»« chá»‘i"
                             disabled={isLoading}
                           >
                             <FaTimesCircle />
@@ -468,7 +494,7 @@ const AdminUploads = ({
                         <button
                           className="au-btn au-btn-delete"
                           onClick={() => handleDelete(upload._id)}
-                          title="Xoá"
+                          title="XoÃ¡"
                           disabled={isLoading}
                         >
                           <FaTrash />
@@ -485,11 +511,11 @@ const AdminUploads = ({
 
       {searchTerm && filtered.length > 0 && (
         <p className="au-search-result">
-          Tìm thấy <strong>{filtered.length}</strong> kết quả cho "{searchTerm}"
+          TÃ¬m tháº¥y <strong>{filtered.length}</strong> káº¿t quáº£ cho "{searchTerm}"
         </p>
       )}
 
-      {/* ── MODALS ── */}
+      {/* Modals */}
       {selected && (
         <UploadDetailModal
           upload={selected}
@@ -509,58 +535,98 @@ const AdminUploads = ({
           onCancel={() => { setRejectModal(null); setRejectReason(""); }}
         />
       )}
+      <ConfirmModal
+        open={Boolean(deleteConfirm)}
+        title="Xoa upload"
+        message={
+          deleteConfirm
+            ? `Ban co chac muon xoa "${deleteConfirm.title}"?`
+            : ""
+        }
+        confirmText="Xoa upload"
+        cancelText="Huy"
+        confirmVariant="danger"
+        loading={actionLoading === deleteConfirm?.id}
+        onConfirm={handleDeleteConfirm}
+        onClose={() => {
+          if (!actionLoading) setDeleteConfirm(null);
+        }}
+      />
+      <ToastMessage
+        open={toast.open}
+        type={toast.type}
+        message={toast.message}
+        onClose={closeToast}
+      />
     </div>
   );
 };
-/* ═══════════════════════════════════════
-   MODAL: Chi tiết upload
-═══════════════════════════════════════ */
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   MODAL: Chi tiáº¿t upload
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 const UploadDetailModal = ({
   upload, onClose, onApprove, onReject, onDelete, actionLoading,
 }) => {
-  const statusCfg  = STATUS_CONFIG[upload.status] || STATUS_CONFIG.pending;
-  const isLoading  = actionLoading === upload._id;
-  const coverURL   = getImageURL(upload);
-  const audioURL   = getAudioURL(upload);
-  const videoURL   = getVideoURL(upload); // ✅ thêm
+  const statusCfg = STATUS_CONFIG[upload.status] || STATUS_CONFIG.pending;
+  const isLoading = actionLoading === upload._id;
+  const coverURL  = getImageURL(upload);
+  const audioURL  = getAudioURL(upload);
+  const videoURL  = getVideoURL(upload);
 
-  // ✅ Tab state: "info" | "video" | "lyrics"
   const [activeTab, setActiveTab] = useState("info");
+
+  /* âœ… Tá»± Ä‘á»™ng chuyá»ƒn tab náº¿u tab hiá»‡n táº¡i khÃ´ng cÃ²n há»£p lá»‡ */
+  useEffect(() => {
+    if (activeTab === "video"  && !videoURL)      setActiveTab("info");
+    if (activeTab === "lyrics" && !upload.lyrics) setActiveTab("info");
+    if (activeTab === "lrc"    && !upload.lrc)    setActiveTab("info");
+  }, [activeTab, videoURL, upload.lyrics, upload.lrc]);
+
+  /* Tabs config */
+  const tabs = [
+    { key: "info",   label: "ThÃ´ng tin",    icon: <FaMusic />,      always: true  },
+    { key: "audio",  label: "Nghe thá»­",     icon: <>ðŸŽ§</>,          always: !!audioURL },
+    { key: "video",  label: "Video MV",     icon: <FaVideo />,      always: !!videoURL },
+    { key: "lyrics", label: "Lá»i bÃ i hÃ¡t",  icon: <FaAlignLeft />,  always: !!upload.lyrics },
+    { key: "lrc",    label: "LRC Karaoke",  icon: <FaMicrophone />, always: !!upload.lrc },
+  ].filter((t) => t.always);
 
   return (
     <div className="au-modal-overlay" onClick={onClose}>
       <div className="au-modal" onClick={(e) => e.stopPropagation()}>
 
-        {/* ── Header ── */}
+        {/* Header */}
         <div className="au-modal-header">
-          <h2>Chi tiết Upload</h2>
-          <button className="au-modal-close" onClick={onClose}>✕</button>
+          <h2>Chi tiáº¿t Upload</h2>
+          <button className="au-modal-close" onClick={onClose}>âœ•</button>
         </div>
 
-        {/* ── Top: Cover + Info cơ bản ── */}
+        {/* Top: Cover + Info */}
         <div className="au-modal-top">
-          {/* Cover */}
           <div className="au-modal-cover">
             {coverURL ? (
               <img src={coverURL} alt={upload.title} />
             ) : (
-              <div className="au-modal-cover-placeholder">
-                <FaMusic />
-              </div>
+              <div className="au-modal-cover-placeholder"><FaMusic /></div>
             )}
           </div>
 
-          {/* Info cơ bản */}
           <div className="au-modal-summary">
             <h3 className="au-modal-title">{upload.title}</h3>
-            <p className="au-modal-artist">{upload.artist}</p>
 
-            {/* Status badge */}
+            {/* âœ… Featuring */}
+            <p className="au-modal-artist">
+              {upload.artist}
+              {upload.featuring && (
+                <span className="au-modal-featuring"> ft. {upload.featuring}</span>
+              )}
+            </p>
+
             <span className={`au-badge ${statusCfg.className}`}>
               {statusCfg.icon} {statusCfg.label}
             </span>
 
-            {/* Lý do từ chối */}
             {upload.status === "rejected" && upload.rejectReason && (
               <div className="au-modal-reject-reason">
                 <FaExclamationTriangle />
@@ -568,74 +634,62 @@ const UploadDetailModal = ({
               </div>
             )}
 
-            {/* Meta nhanh */}
+            {/* âœ… Quick meta vá»›i cÃ¡c field má»›i */}
             <div className="au-modal-quick-meta">
               <span><FaUser /> {upload.uploadedBy?.username || "N/A"}</span>
-              <span>🎵 {upload.genre || "N/A"}</span>
-              <span>⏱ {formatDuration(upload.duration)}</span>
-              {videoURL && <span className="au-has-video-tag"><FaVideo /> Có video</span>}
+              <span>ðŸŽµ {upload.genre || "N/A"}</span>
+              {upload.releaseYear && <span><FaCalendarAlt /> {upload.releaseYear}</span>}
+              <span>â± {formatDuration(upload.duration)}</span>
+              {videoURL && <span className="au-has-video-tag"><FaVideo /> CÃ³ MV</span>}
+              {upload.lrc && <span className="au-has-lrc-tag"><FaMicrophone /> CÃ³ LRC</span>}
             </div>
+
+            {/* âœ… Tags */}
+            {upload.tags?.length > 0 && (
+              <div className="au-modal-tags">
+                <FaTag className="au-modal-tags-icon" />
+                {upload.tags.map((tag) => (
+                  <span key={tag} className="au-modal-tag">#{tag}</span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* ── Tabs ── */}
+        {/* Tabs */}
         <div className="au-modal-tabs">
-          <button
-            className={`au-modal-tab ${activeTab === "info" ? "active" : ""}`}
-            onClick={() => setActiveTab("info")}
-          >
-            <FaMusic /> Thông tin
-          </button>
-
-          {audioURL && (
+          {tabs.map((tab) => (
             <button
-              className={`au-modal-tab ${activeTab === "audio" ? "active" : ""}`}
-              onClick={() => setActiveTab("audio")}
+              key={tab.key}
+              className={`au-modal-tab ${activeTab === tab.key ? "active" : ""}`}
+              onClick={() => setActiveTab(tab.key)}
             >
-              🎧 Nghe thử
+              {tab.icon} {tab.label}
             </button>
-          )}
-
-          {/* ✅ Tab video - chỉ hiện khi có video */}
-          {videoURL && (
-            <button
-              className={`au-modal-tab ${activeTab === "video" ? "active" : ""}`}
-              onClick={() => setActiveTab("video")}
-            >
-              <FaVideo /> Video MV
-            </button>
-          )}
-
-          {upload.lyrics && (
-            <button
-              className={`au-modal-tab ${activeTab === "lyrics" ? "active" : ""}`}
-              onClick={() => setActiveTab("lyrics")}
-            >
-              📝 Lời bài hát
-            </button>
-          )}
+          ))}
         </div>
 
-        {/* ── Tab Content ── */}
+        {/* Tab Content */}
         <div className="au-modal-tab-content">
 
-          {/* Tab: Thông tin */}
+          {/* Tab: ThÃ´ng tin */}
           {activeTab === "info" && (
             <div className="au-modal-meta">
               {[
-                { label: "Người upload", value: upload.uploadedBy?.username || "N/A" },
-                { label: "Email",        value: upload.uploadedBy?.email    || "N/A" },
-                { label: "Album",        value: upload.album    || "Single" },
-                { label: "Thể loại",     value: upload.genre    || "N/A"    },
-                { label: "Thời lượng",   value: formatDuration(upload.duration) },
-                { label: "Ngày upload",  value: formatDate(upload.createdAt)    },
-                {
-                  label: "File video",
-                  value: videoURL ? "✅ Có video MV" : "❌ Không có video",
-                },
+                { label: "NgÆ°á»i upload", value: upload.uploadedBy?.username || "N/A"    },
+                { label: "Email",        value: upload.uploadedBy?.email    || "N/A"    },
+                { label: "Nghá»‡ sÄ© ft.",  value: upload.featuring            || "KhÃ´ng cÃ³" },
+                { label: "Album",        value: upload.album                || "Single" },
+                { label: "Thá»ƒ loáº¡i",     value: upload.genre                || "N/A"    },
+                { label: "NÄƒm phÃ¡t hÃ nh",value: upload.releaseYear          || "N/A"    },
+                { label: "Thá»i lÆ°á»£ng",   value: formatDuration(upload.duration)         },
+                { label: "NgÃ y upload",  value: formatDate(upload.createdAt)            },
+                { label: "File video",   value: videoURL ? "âœ… CÃ³ video MV"  : "âŒ KhÃ´ng cÃ³" },
+                { label: "LRC Karaoke",  value: upload.lrc ? `âœ… CÃ³ (${upload.lrc.split("\n").length} dÃ²ng)` : "âŒ KhÃ´ng cÃ³" },
+                { label: "Tags",         value: upload.tags?.length > 0 ? upload.tags.map(t => `#${t}`).join("  ") : "KhÃ´ng cÃ³" },
                 ...(upload.reviewedBy ? [
-                  { label: "Người duyệt", value: upload.reviewedBy?.username },
-                  { label: "Ngày duyệt",  value: formatDate(upload.reviewedAt) },
+                  { label: "NgÆ°á»i duyá»‡t", value: upload.reviewedBy?.username  },
+                  { label: "NgÃ y duyá»‡t",  value: formatDate(upload.reviewedAt) },
                 ] : []),
               ].map((row) => (
                 <div key={row.label} className="au-meta-row">
@@ -646,7 +700,7 @@ const UploadDetailModal = ({
             </div>
           )}
 
-          {/* Tab: Nghe thử audio */}
+          {/* Tab: Nghe thá»­ */}
           {activeTab === "audio" && audioURL && (
             <div className="au-tab-audio">
               <div className="au-audio-cover">
@@ -659,53 +713,87 @@ const UploadDetailModal = ({
                   <span /><span /><span /><span /><span />
                 </div>
               </div>
-              <p className="au-audio-song-name">{upload.title} — {upload.artist}</p>
-              <audio
-                controls
-                src={audioURL}
-                className="au-audio-player"
-                preload="metadata"
-              />
+              <p className="au-audio-song-name">
+                {upload.title}
+                {upload.featuring && <span className="au-audio-featuring"> ft. {upload.featuring}</span>}
+                {" â€” "}{upload.artist}
+              </p>
+              <audio controls src={audioURL} className="au-audio-player" preload="metadata" />
             </div>
           )}
 
-          {/* ✅ Tab: Video MV */}
+          {/* Tab: Video MV */}
           {activeTab === "video" && videoURL && (
             <div className="au-tab-video">
               <div className="au-video-container">
                 <video
-                  controls
-                  src={videoURL}
+                  controls src={videoURL}
                   className="au-video-player"
                   preload="metadata"
                   poster={coverURL || undefined}
                 >
-                  Trình duyệt không hỗ trợ video.
+                  TrÃ¬nh duyá»‡t khÃ´ng há»— trá»£ video.
                 </video>
               </div>
               <div className="au-video-info">
                 <FaVideo className="au-video-info-icon" />
                 <div>
-                  <p className="au-video-info-title">
-                    {upload.title} — MV
-                  </p>
-                  <p className="au-video-info-sub">
-                    {upload.videoFile}
-                  </p>
+                  <p className="au-video-info-title">{upload.title} â€” MV</p>
+                  <p className="au-video-info-sub">{upload.videoFile}</p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Tab: Lời bài hát */}
+          {/* Tab: Lá»i bÃ i hÃ¡t */}
           {activeTab === "lyrics" && upload.lyrics && (
             <div className="au-tab-lyrics">
               <pre className="au-lyrics-content">{upload.lyrics}</pre>
             </div>
           )}
+
+          {/* âœ… Tab: LRC Karaoke */}
+          {activeTab === "lrc" && upload.lrc && (
+            <div className="au-tab-lrc">
+              <div className="au-lrc-header">
+                <FaMicrophone className="au-lrc-icon" />
+                <div>
+                  <span className="au-lrc-title">Lá»i Ä‘á»“ng bá»™ (LRC / Karaoke)</span>
+                  <span className="au-lrc-count">
+                    {upload.lrc.split("\n").filter((l) => l.trim()).length} dÃ²ng
+                  </span>
+                </div>
+              </div>
+
+              {/* Parse vÃ  hiá»ƒn thá»‹ LRC dáº¡ng Ä‘áº¹p */}
+              <div className="au-lrc-lines">
+                {upload.lrc
+                  .split("\n")
+                  .filter((line) => line.trim())
+                  .map((line, i) => {
+                    // Parse timestamp [mm:ss.xx]
+                    const match = line.match(/^\[(\d{2}:\d{2}\.\d{2})\](.*)/);
+                    if (match) {
+                      return (
+                        <div key={i} className="au-lrc-line">
+                          <span className="au-lrc-time">[{match[1]}]</span>
+                          <span className="au-lrc-text">{match[2]}</span>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={i} className="au-lrc-line au-lrc-line-raw">
+                        <span className="au-lrc-text">{line}</span>
+                      </div>
+                    );
+                  })
+                }
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* ── Footer actions ── */}
+        {/* Footer */}
         <div className="au-modal-footer">
           {upload.status !== "approved" && (
             <button
@@ -714,8 +802,8 @@ const UploadDetailModal = ({
               disabled={isLoading}
             >
               {isLoading
-                ? <><FaSpinner className="au-spin" /> Đang xử lý...</>
-                : <><FaCheckCircle /> Duyệt bài</>
+                ? <><FaSpinner className="au-spin" /> Äang xá»­ lÃ½...</>
+                : <><FaCheckCircle /> Duyá»‡t bÃ i</>
               }
             </button>
           )}
@@ -725,7 +813,7 @@ const UploadDetailModal = ({
               onClick={() => onReject(upload)}
               disabled={isLoading}
             >
-              <FaTimesCircle /> Từ chối
+              <FaTimesCircle /> Tá»« chá»‘i
             </button>
           )}
           <button
@@ -733,51 +821,40 @@ const UploadDetailModal = ({
             onClick={() => onDelete(upload._id)}
             disabled={isLoading}
           >
-            <FaTrash /> Xoá
+            <FaTrash /> XoÃ¡
           </button>
-          <button
-            className="au-modal-btn au-modal-btn-cancel"
-            onClick={onClose}
-          >
-            Đóng
+          <button className="au-modal-btn au-modal-btn-cancel" onClick={onClose}>
+            ÄÃ³ng
           </button>
         </div>
-
       </div>
     </div>
   );
 };
 
-/* ═══════════════════════════════════════
-   MODAL: Nhập lý do từ chối
-═══════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   MODAL: Tá»« chá»‘i
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 const RejectReasonModal = ({ title, reason, onReasonChange, onConfirm, onCancel }) => {
   const QUICK_REASONS = [
-    "Chất lượng âm thanh kém",
-    "Nội dung vi phạm bản quyền",
-    "Thông tin bài hát không chính xác",
-    "File bị lỗi hoặc không phát được",
-    "Nội dung không phù hợp",
+    "Cháº¥t lÆ°á»£ng Ã¢m thanh kÃ©m",
+    "Ná»™i dung vi pháº¡m báº£n quyá»n",
+    "ThÃ´ng tin bÃ i hÃ¡t khÃ´ng chÃ­nh xÃ¡c",
+    "File bá»‹ lá»—i hoáº·c khÃ´ng phÃ¡t Ä‘Æ°á»£c",
+    "Ná»™i dung khÃ´ng phÃ¹ há»£p",
   ];
 
   return (
     <div className="au-modal-overlay" onClick={onCancel}>
       <div className="au-reject-modal" onClick={(e) => e.stopPropagation()}>
-
-        {/* Header */}
         <div className="au-modal-header">
-          <h2><FaTimesCircle /> Từ chối bài hát</h2>
-          <button className="au-modal-close" onClick={onCancel}>✕</button>
+          <h2><FaTimesCircle /> Tá»« chá»‘i bÃ i hÃ¡t</h2>
+          <button className="au-modal-close" onClick={onCancel}>âœ•</button>
         </div>
 
-        {/* Body */}
         <div className="au-reject-modal-body">
-          <p className="au-reject-song-name">
-            Bài hát: <strong>"{title}"</strong>
-          </p>
-
-          {/* Quick reasons */}
-          <p className="au-reject-quick-label">Chọn nhanh:</p>
+          <p className="au-reject-song-name">BÃ i hÃ¡t: <strong>"{title}"</strong></p>
+          <p className="au-reject-quick-label">Chá»n nhanh:</p>
           <div className="au-reject-quick-list">
             {QUICK_REASONS.map((r) => (
               <button
@@ -789,33 +866,22 @@ const RejectReasonModal = ({ title, reason, onReasonChange, onConfirm, onCancel 
               </button>
             ))}
           </div>
-
-          {/* Custom reason */}
-          <label className="au-reject-custom-label">
-            Hoặc nhập lý do khác:
-          </label>
+          <label className="au-reject-custom-label">Hoáº·c nháº­p lÃ½ do khÃ¡c:</label>
           <textarea
             className="au-reject-textarea"
-            placeholder="Nhập lý do từ chối..."
+            placeholder="Nháº­p lÃ½ do tá»« chá»‘i..."
             value={reason}
             onChange={(e) => onReasonChange(e.target.value)}
             rows={3}
           />
         </div>
 
-        {/* Footer */}
         <div className="au-modal-footer">
-          <button
-            className="au-modal-btn au-modal-btn-reject"
-            onClick={onConfirm}
-          >
-            <FaTimesCircle /> Xác nhận từ chối
+          <button className="au-modal-btn au-modal-btn-reject" onClick={onConfirm}>
+            <FaTimesCircle /> XÃ¡c nháº­n tá»« chá»‘i
           </button>
-          <button
-            className="au-modal-btn au-modal-btn-cancel"
-            onClick={onCancel}
-          >
-            Huỷ
+          <button className="au-modal-btn au-modal-btn-cancel" onClick={onCancel}>
+            Huá»·
           </button>
         </div>
       </div>
@@ -824,3 +890,5 @@ const RejectReasonModal = ({ title, reason, onReasonChange, onConfirm, onCancel 
 };
 
 export default AdminUploads;
+
+

@@ -1,47 +1,81 @@
 /* src/components/SongItem.css */
+
 .song-item {
   display: flex;
   align-items: center;
-  padding: 10px 20px;
-  border-radius: 8px;
-  transition: all 0.3s;
   gap: 15px;
+  padding: 10px 18px;
+  border-radius: 16px;
+  transition: all 0.22s ease;
+  border: 1px solid transparent;
 }
 
-.song-item:hover  { background: rgba(255, 255, 255, 0.1); }
-.song-item.active { background: rgba(29, 185, 84, 0.15); }
+.song-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.song-item.active {
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.14),
+    rgba(6, 182, 212, 0.08)
+  );
+  border-color: rgba(103, 232, 249, 0.12);
+}
 
 /* ===== INDEX ===== */
 .song-index {
   width: 30px;
   text-align: center;
-  color: rgb(210, 210, 210);  /* ✅ dùng variable */
-  font-size: 0.9rem;
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 600;
   flex-shrink: 0;
+}
+
+.index-number {
+  color: #94a3b8;
 }
 
 /* ===== PLAYING ANIMATION ===== */
 .playing-animation {
+  height: 16px;
   display: flex;
   align-items: flex-end;
   gap: 2px;
-  height: 16px;
 }
 
 .playing-animation span {
   width: 3px;
-  background: #1db954;
-  border-radius: 2px;
-  animation: bounce 0.6s ease-in-out infinite alternate;
+  border-radius: 999px;
+  background: #67e8f9;
+  animation: songBounce 0.65s ease-in-out infinite alternate;
 }
 
-.playing-animation span:nth-child(1) { height: 8px;  animation-delay: 0s; }
-.playing-animation span:nth-child(2) { height: 14px; animation-delay: 0.2s; }
-.playing-animation span:nth-child(3) { height: 10px; animation-delay: 0.4s; }
+.playing-animation span:nth-child(1) {
+  height: 8px;
+  animation-delay: 0s;
+}
 
-@keyframes bounce {
-  0%   { height: 4px; }
-  100% { height: 16px; }
+.playing-animation span:nth-child(2) {
+  height: 14px;
+  animation-delay: 0.18s;
+}
+
+.playing-animation span:nth-child(3) {
+  height: 10px;
+  animation-delay: 0.36s;
+}
+
+@keyframes songBounce {
+  0% {
+    height: 4px;
+    opacity: 0.75;
+  }
+  100% {
+    height: 16px;
+    opacity: 1;
+  }
 }
 
 /* ===== COVER ===== */
@@ -49,32 +83,44 @@
   position: relative;
   width: 50px;
   height: 50px;
-  border-radius: 6px;
+  padding: 0;
+  border: none;
+  border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
   flex-shrink: 0;
+  background: transparent;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
 }
 
 .song-cover {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+  transition: transform 0.25s ease;
+}
+
+.song-cover-wrapper:hover .song-cover {
+  transform: scale(1.03);
 }
 
 .song-cover-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(2, 6, 23, 0.48);
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
-  transition: opacity 0.3s;
   color: #fff;
-  font-size: 1rem;
+  font-size: 15px;
+  opacity: 0;
+  transition: opacity 0.22s ease;
 }
 
-.song-cover-wrapper:hover .song-cover-overlay { opacity: 1; }
+.song-cover-wrapper:hover .song-cover-overlay {
+  opacity: 1;
+}
 
 /* ===== INFO ===== */
 .song-info {
@@ -82,104 +128,201 @@
   min-width: 0;
 }
 
-.song-title-link { text-decoration: none; }
+.song-title-link {
+  text-decoration: none;
+}
 
 .song-title {
-  color: var(--text-primary);   /* ✅ */
-  font-size: 0.95rem;
-  margin: 0 0 4px 0;
+  margin: 0 0 4px;
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: color 0.3s ease;
+  transition: color 0.2s ease;
 }
 
-.song-title.highlight { color: #1db954; }
+.song-title-link:hover .song-title {
+  color: #dbeafe;
+}
+
+.song-title.highlight {
+  color: #67e8f9;
+}
 
 .song-artist {
-  color: #1db954;     /* ✅ */
-  font-size: 0.8rem;
   margin: 0;
-  transition: color 0.3s ease;
+  color: #94a3b8;
+  font-size: 12px;
+  transition: color 0.2s ease;
 }
 
 /* ===== DURATION ===== */
 .song-duration {
   width: 55px;
   text-align: center;
-  color: rgb(210, 210, 210);     /* ✅ */
-  font-size: 0.85rem;
+  color: #cbd5e1;
+  font-size: 12px;
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ===== ALBUM ===== */
 .song-album {
-  color: rgb(210, 210, 210);     /* ✅ */
-  font-size: 0.85rem;
   width: 150px;
   flex-shrink: 0;
+  color: #cbd5e1;
+  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* ===== LƯỢT NGHE ===== */
+/* ===== PLAY COUNT ===== */
 .song-play-count {
-  color: rgb(210, 210, 210);     /* ✅ */
-  font-size: 0.85rem;
-  width: 110px;
+  width: 120px;
   flex-shrink: 0;
+  color: #94a3b8;
+  font-size: 12px;
 }
 
 /* ===== ACTIONS ===== */
-.song-actions { width: 30px; flex-shrink: 0; }
-
-.song-actions .fav-btn {
-  background: none;
-  border: none;
-  color: rgb(210, 210, 210);     /* ✅ */
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 5px;
-  transition: all 0.3s;
-}
-
-.song-actions .fav-btn:hover { color: var(--text-primary); transform: scale(1.2); }
-.song-actions .fav-btn.liked { color: #1db954; }
-
-/* ===== LIGHT THEME override ===== */
-[data-theme="light"] .song-item:hover {
-  background: rgba(0, 0, 0, 0.06);
-}
-
-[data-theme="light"] .song-item.active {
-  background: rgba(29, 185, 84, 0.1);
-}
-
-/* Thêm vào SongItem.css */
-
-.add-playlist-btn {
-  background: none;
-  border: none;
-  color: #aaa;
-  cursor: pointer;
-  padding: 6px;
-  border-radius: 50%;
-  font-size: 14px;
+.song-actions {
+  width: 72px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: color 0.2s, background 0.2s;
-  opacity: 0; /* ✅ Ẩn mặc định */
-  transition: opacity 0.2s, color 0.2s, background 0.2s;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
-/* ✅ Hiện khi hover vào song-item */
+.song-actions .fav-btn,
+.add-playlist-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.song-actions .fav-btn {
+  color: #a5b4cc;
+  font-size: 14px;
+}
+
+.song-actions .fav-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  transform: scale(1.06);
+}
+
+.song-actions .fav-btn.liked {
+  color: #f9a8d4;
+}
+
+.add-playlist-btn {
+  color: #a5b4cc;
+  font-size: 13px;
+  opacity: 0;
+}
+
 .song-item:hover .add-playlist-btn {
   opacity: 1;
 }
 
 .add-playlist-btn:hover {
-  color: #1db954;
-  background: rgba(29, 185, 84, 0.1);
+  color: #67e8f9;
+  background: rgba(6, 182, 212, 0.08);
+}
+
+/* ===== LIGHT THEME ===== */
+[data-theme="light"] .song-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .song-item.active {
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.1),
+    rgba(6, 182, 212, 0.07)
+  );
+  border-color: rgba(99, 102, 241, 0.12);
+}
+
+[data-theme="light"] .song-title {
+  color: #0f172a;
+}
+
+[data-theme="light"] .song-title.highlight {
+  color: #4f46e5;
+}
+
+[data-theme="light"] .song-artist {
+  color: #64748b;
+}
+
+[data-theme="light"] .song-duration,
+[data-theme="light"] .song-album {
+  color: #334155;
+}
+
+[data-theme="light"] .song-play-count,
+[data-theme="light"] .index-number {
+  color: #64748b;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 900px) {
+  .song-item {
+    padding: 10px 12px;
+  }
+
+  .song-album,
+  .song-play-count {
+    display: none;
+  }
+
+  .song-actions {
+    width: 64px;
+  }
+}
+
+@media (max-width: 640px) {
+  .song-item {
+    gap: 12px;
+    padding: 10px 10px;
+  }
+
+  .song-cover-wrapper {
+    width: 46px;
+    height: 46px;
+    border-radius: 10px;
+  }
+
+  .song-title {
+    font-size: 13px;
+  }
+
+  .song-artist,
+  .song-duration {
+    font-size: 11px;
+  }
+
+  .song-actions {
+    width: 60px;
+    gap: 4px;
+  }
+
+  .song-actions .fav-btn,
+  .add-playlist-btn {
+    width: 30px;
+    height: 30px;
+  }
 }

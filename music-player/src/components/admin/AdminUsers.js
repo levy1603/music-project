@@ -1,219 +1,343 @@
-// src/components/admin/AdminUsers.js
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  FaSearch, FaTrash, FaUserShield,
-  FaUser, FaBan, FaUnlock,
+  FaSearch,
+  FaTrash,
+  FaUserShield,
+  FaUser,
+  FaBan,
+  FaUnlock,
 } from "react-icons/fa";
+import ConfirmModal from "../common/ConfirmModal";
+import ToastMessage from "../common/ToastMessage";
 import "./AdminUsers.css";
 
+const INITIAL_TOAST = {
+  open: false,
+  type: "info",
+  message: "",
+};
+
 const AdminUsers = () => {
-  const [users, setUsers]     = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch]   = useState("");
+  const [search, setSearch] = useState("");
+  const [actionLoading, setActionLoading] = useState(null);
+  const [confirmState, setConfirmState] = useState(null);
+  const [toast, setToast] = useState(INITIAL_TOAST);
+
+  const showToast = (type, message) => {
+    setToast({ open: true, type, message });
+  };
+
+  const closeToast = () => {
+    setToast(INITIAL_TOAST);
+  };
 
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res   = await fetch("/api/users", {
+      const res = await fetch("/api/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      if (data.success) setUsers(data.data);
-    } catch (err) {
-      console.error("Lỗi lấy users:", err);
+
+      if (data.success) {
+        setUsers(data.data);
+      } else {
+        showToast("error", data.message || "Khong the tai danh sach nguoi dung.");
+      }
+    } catch (error) {
+      console.error("Loi lay users:", error);
+      showToast("error", "Khong the tai danh sach nguoi dung.");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
-  const filtered = users.filter(
-    (u) =>
-      u.username.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase())
+  const filtered = useMemo(
+    () =>
+      users.filter(
+        (user) =>
+          user.username.toLowerCase().includes(search.toLowerCase()) ||
+          user.email.toLowerCase().includes(search.toLowerCase())
+      ),
+    [users, search]
   );
 
-  // ===== XÓA USER =====
-  const handleDelete = async (userId) => {
-    if (!window.confirm("Bạn có chắc muốn xóa người dùng này?")) return;
-    try {
-      const token = localStorage.getItem("token");
-      const res   = await fetch(`/api/users/${userId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) setUsers((prev) => prev.filter((u) => u._id !== userId));
-      else alert(data.message);
-    } catch (err) {
-      console.error("Lỗi xóa user:", err);
-    }
+  const openDeleteConfirm = (user) => {
+    setConfirmState({
+      type: "delete",
+      userId: user._id,
+      title: "Xoa nguoi dung",
+      message: `Ban co chac muon xoa tai khoan "${user.username}"?`,
+      confirmText: "Xoa tai khoan",
+      confirmVariant: "danger",
+    });
   };
 
-  // ===== ĐỔI ROLE =====
-  const handleRoleChange = async (userId, currentRole) => {
-    const newRole = currentRole === "admin" ? "user" : "admin";
-    const msg     = newRole === "admin"
-      ? "Cấp quyền Admin cho người dùng này?"
-      : "Thu hồi quyền Admin của người dùng này?";
-    if (!window.confirm(msg)) return;
+  const openRoleConfirm = (user) => {
+    const nextRole = user.role === "admin" ? "user" : "admin";
+
+    setConfirmState({
+      type: "role",
+      userId: user._id,
+      currentRole: user.role,
+      nextRole,
+      title: nextRole === "admin" ? "Cap quyen admin" : "Thu hoi quyen admin",
+      message:
+        nextRole === "admin"
+          ? `Cap quyen admin cho "${user.username}"?`
+          : `Thu hoi quyen admin cua "${user.username}"?`,
+      confirmText: nextRole === "admin" ? "Cap quyen" : "Thu hoi",
+      confirmVariant: "primary",
+    });
+  };
+
+  const openBanConfirm = (user) => {
+    setConfirmState({
+      type: "ban",
+      userId: user._id,
+      isBanned: user.isBanned,
+      title: user.isBanned ? "Mo khoa tai khoan" : "Khoa tai khoan",
+      message: user.isBanned
+        ? `Mo khoa tai khoan "${user.username}"?`
+        : `Khoa tai khoan "${user.username}"?`,
+      confirmText: user.isBanned ? "Mo khoa" : "Khoa tai khoan",
+      confirmVariant: user.isBanned ? "primary" : "danger",
+    });
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmState) return;
+
+    const token = localStorage.getItem("token");
+    const { type, userId, nextRole, currentRole, isBanned } = confirmState;
+
+    setActionLoading(userId);
 
     try {
-      const token = localStorage.getItem("token");
-      const res   = await fetch(`/api/users/${userId}/role`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ role: newRole }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setUsers((prev) =>
-          prev.map((u) => u._id === userId ? { ...u, role: newRole } : u)
-        );
-      } else {
-        alert(data.message);
+      if (type === "delete") {
+        const res = await fetch(`/api/users/${userId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+          throw new Error(data.message || "Khong the xoa nguoi dung.");
+        }
+
+        setUsers((prev) => prev.filter((user) => user._id !== userId));
+        showToast("success", data.message || "Da xoa nguoi dung.");
       }
-    } catch (err) {
-      console.error("Lỗi đổi role:", err);
-    }
-  };
 
-  // ===== KHÓA / MỞ KHÓA =====
-  const handleBan = async (userId, isBanned) => {
-    const msg = isBanned ? "Mở khóa tài khoản này?" : "Khóa tài khoản này?";
-    if (!window.confirm(msg)) return;
+      if (type === "role") {
+        const res = await fetch(`/api/users/${userId}/role`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ role: nextRole }),
+        });
+        const data = await res.json();
 
-    try {
-      const token = localStorage.getItem("token");
-      const res   = await fetch(`/api/users/${userId}/ban`, {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) {
+        if (!data.success) {
+          throw new Error(data.message || "Khong the cap nhat quyen.");
+        }
+
         setUsers((prev) =>
-          prev.map((u) => u._id === userId ? { ...u, isBanned: !isBanned } : u)
+          prev.map((user) =>
+            user._id === userId ? { ...user, role: nextRole } : user
+          )
         );
-      } else {
-        alert(data.message);
+        showToast(
+          "success",
+          nextRole === "admin"
+            ? "Da cap quyen admin."
+            : currentRole === "admin"
+            ? "Da thu hoi quyen admin."
+            : "Da cap nhat quyen."
+        );
       }
-    } catch (err) {
-      console.error("Lỗi ban user:", err);
+
+      if (type === "ban") {
+        const res = await fetch(`/api/users/${userId}/ban`, {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+          throw new Error(data.message || "Khong the cap nhat trang thai tai khoan.");
+        }
+
+        setUsers((prev) =>
+          prev.map((user) =>
+            user._id === userId ? { ...user, isBanned: !isBanned } : user
+          )
+        );
+        showToast(
+          "success",
+          isBanned ? "Da mo khoa tai khoan." : "Da khoa tai khoan."
+        );
+      }
+
+      setConfirmState(null);
+    } catch (error) {
+      console.error("Loi xu ly user:", error);
+      showToast("error", error.message || "Co loi xay ra.");
+    } finally {
+      setActionLoading(null);
     }
   };
 
-  if (loading) return <div className="admin-loading"><div className="spinner" /><p>Đang tải...</p></div>;
+  if (loading) {
+    return (
+      <div className="admin-loading">
+        <div className="spinner" />
+        <p>Dang tai...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="admin-users">
+    <>
+      <div className="admin-users">
+        <div className="admin-search">
+          <FaSearch />
+          <input
+            type="text"
+            placeholder="Tim ten, email..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <span>{filtered.length} nguoi dung</span>
+        </div>
 
-      {/* Search */}
-      <div className="admin-search">
-        <FaSearch />
-        <input
-          type="text"
-          placeholder="Tìm tên, email..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <span>{filtered.length} người dùng</span>
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Nguoi dung</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Bai hat</th>
+              <th>Trang thai</th>
+              <th>Hanh dong</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((user, index) => {
+              const isBusy = actionLoading === user._id;
+
+              return (
+                <tr key={user._id} className={user.isBanned ? "banned-row" : ""}>
+                  <td>{index + 1}</td>
+                  <td>
+                    <div className="user-cell">
+                      <img
+                        src={
+                          user.avatar
+                            ? `http://localhost:5000${user.avatar}`
+                            : `https://i.pravatar.cc/32?u=${user._id}`
+                        }
+                        alt={user.username}
+                        onError={(event) => {
+                          event.target.src = `https://i.pravatar.cc/32?u=${user._id}`;
+                        }}
+                      />
+                      <span>{user.username}</span>
+                    </div>
+                  </td>
+
+                  <td>{user.email}</td>
+
+                  <td>
+                    <span className={`role-badge ${user.role}`}>
+                      {user.role === "admin" ? <FaUserShield /> : <FaUser />}
+                      {user.role}
+                    </span>
+                  </td>
+
+                  <td>{user.uploadCount || 0}</td>
+
+                  <td>
+                    <span
+                      className={`status-badge ${
+                        user.isBanned ? "banned" : "active"
+                      }`}
+                    >
+                      {user.isBanned ? "Da khoa" : "Hoat dong"}
+                    </span>
+                  </td>
+
+                  <td>
+                    <div className="action-btns">
+                      <button
+                        className={`btn-action ${
+                          user.isBanned ? "btn-unban" : "btn-ban"
+                        }`}
+                        onClick={() => openBanConfirm(user)}
+                        title={user.isBanned ? "Mo khoa" : "Khoa tai khoan"}
+                        disabled={user.role === "admin" || isBusy}
+                      >
+                        {user.isBanned ? <FaUnlock /> : <FaBan />}
+                      </button>
+
+                      <button
+                        className={`btn-action ${
+                          user.role === "admin" ? "btn-demote" : "btn-promote"
+                        }`}
+                        onClick={() => openRoleConfirm(user)}
+                        title={user.role === "admin" ? "Thu hoi admin" : "Cap admin"}
+                        disabled={isBusy}
+                      >
+                        <FaUserShield />
+                      </button>
+
+                      <button
+                        className="btn-action btn-delete"
+                        onClick={() => openDeleteConfirm(user)}
+                        title="Xoa tai khoan"
+                        disabled={user.role === "admin" || isBusy}
+                      >
+                        <FaTrash />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
-      {/* Table */}
-      <table className="admin-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Người dùng</th>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Bài hát</th>
-            <th>Trạng thái</th>
-            <th>Hành động</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filtered.map((user, index) => (
-            <tr key={user._id} className={user.isBanned ? "banned-row" : ""}>
-              <td>{index + 1}</td>
+      <ConfirmModal
+        open={Boolean(confirmState)}
+        title={confirmState?.title}
+        message={confirmState?.message}
+        confirmText={confirmState?.confirmText}
+        cancelText="Huy"
+        confirmVariant={confirmState?.confirmVariant}
+        loading={actionLoading === confirmState?.userId}
+        onConfirm={handleConfirmAction}
+        onClose={() => {
+          if (!actionLoading) setConfirmState(null);
+        }}
+      />
 
-              {/* Avatar + tên */}
-              <td>
-                <div className="user-cell">
-                  <img
-                    src={
-                      user.avatar
-                        ? `http://localhost:5000${user.avatar}`
-                        : `https://i.pravatar.cc/32?u=${user._id}`
-                    }
-                    alt={user.username}
-                    onError={(e) => { e.target.src = `https://i.pravatar.cc/32?u=${user._id}`; }}
-                  />
-                  <span>{user.username}</span>
-                </div>
-              </td>
-
-              <td>{user.email}</td>
-
-              {/* Role badge */}
-              <td>
-                <span className={`role-badge ${user.role}`}>
-                  {user.role === "admin" ? <FaUserShield /> : <FaUser />}
-                  {user.role}
-                </span>
-              </td>
-
-              <td>{user.uploadCount || 0}</td>
-
-              {/* Trạng thái */}
-              <td>
-                <span className={`status-badge ${user.isBanned ? "banned" : "active"}`}>
-                  {user.isBanned ? "Đã khóa" : "Hoạt động"}
-                </span>
-              </td>
-
-              {/* Hành động */}
-              <td>
-                <div className="action-btns">
-                  {/* Khóa / Mở khóa */}
-                  <button
-                    className={`btn-action ${user.isBanned ? "btn-unban" : "btn-ban"}`}
-                    onClick={() => handleBan(user._id, user.isBanned)}
-                    title={user.isBanned ? "Mở khóa" : "Khóa tài khoản"}
-                    disabled={user.role === "admin"}
-                  >
-                    {user.isBanned ? <FaUnlock /> : <FaBan />}
-                  </button>
-
-                  {/* Đổi role */}
-                  <button
-                    className={`btn-action ${user.role === "admin" ? "btn-demote" : "btn-promote"}`}
-                    onClick={() => handleRoleChange(user._id, user.role)}
-                    title={user.role === "admin" ? "Thu hồi Admin" : "Cấp Admin"}
-                  >
-                    <FaUserShield />
-                  </button>
-
-                  {/* Xóa */}
-                  <button
-                    className="btn-action btn-delete"
-                    onClick={() => handleDelete(user._id)}
-                    title="Xóa tài khoản"
-                    disabled={user.role === "admin"}
-                  >
-                    <FaTrash />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+      <ToastMessage
+        open={toast.open}
+        type={toast.type}
+        message={toast.message}
+        onClose={closeToast}
+      />
+    </>
   );
 };
 

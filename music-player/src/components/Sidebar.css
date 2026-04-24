@@ -1,65 +1,67 @@
 /* src/components/Sidebar.css */
+
 .sidebar {
-  width: 240px;
-  background: rgba(75, 70, 70, 0.244);
+  width: 248px;
   position: fixed;
   top: 70px;
   left: 0;
   bottom: 100px;
-  border-right: 1px solid rgba(255, 255, 255, 0);
-  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-
-  /* ✅ KHÔNG overflow ở đây */
+  background:
+    linear-gradient(180deg, rgba(11, 17, 32, 0.142), rgba(8, 13, 24, 0.329));
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow:
+    10px 0 30px rgba(0, 0, 0, 0.16),
+    inset -1px 0 0 rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  transition: width 0.32s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: visible;
+  z-index: 20;
 }
 
-/* ===== COLLAPSED ===== */
 .sidebar.collapsed {
-  width: 64px;
+  width: 72px;
 }
 
-/* ===== NÚT TOGGLE ===== */
+/* ===== TOGGLE ===== */
 .sidebar-toggle-btn {
   position: absolute;
-  top: 20px;           /* ✅ cùng hàng với MENU title */
-  right: -14px;        /* ✅ nhô ra ngoài 50% */
-
-  width: 28px;
-  height: 28px;
-  background: #1a1a2e;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 50%;
-  color: #888;
+  top: 18px;
+  right: -14px;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(20, 28, 48, 0.98), rgba(13, 18, 35, 0.98));
+  color: #b9c3da;
   cursor: pointer;
-  font-size: 0.7rem;
-  transition: all 0.3s;
+  font-size: 11px;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;         /* ✅ luôn nổi trên cùng */
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.5);
-  flex-shrink: 0;
+  z-index: 50;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.24);
+  transition: all 0.22s ease;
 }
 
 .sidebar-toggle-btn:hover {
-  background: #1db954;
-  border-color: #1db954;
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
   color: #fff;
-  box-shadow: 0 0 10px rgba(29, 185, 84, 0.5);
+  border-color: transparent;
+  transform: translateY(-1px);
 }
 
-/* ===== SCROLL WRAPPER - chỉ phần này scroll ===== */
+/* ===== SCROLL ===== */
 .sidebar-scroll {
   position: absolute;
-  inset: 0;             /* top/right/bottom/left: 0 */
-  padding: 20px 0;
-  overflow-y: auto;     /* ✅ scroll nằm trong wrapper */
+  inset: 0;
+  padding: 18px 0 20px;
+  overflow-y: auto;
   overflow-x: hidden;
 }
 
-/* ===== SCROLLBAR ===== */
 .sidebar-scroll::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
 }
 
 .sidebar-scroll::-webkit-scrollbar-track {
@@ -67,23 +69,30 @@
 }
 
 .sidebar-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
 }
 
 .sidebar-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.18);
 }
 
-/* ===== TITLE ===== */
+/* ===== TITLES ===== */
 .sidebar-title {
-  color: #888;
-  font-size: 0.75rem;
-  letter-spacing: 2px;
-  padding: 10px 25px;
+  padding: 10px 22px;
   margin: 0;
+  color: #7f8fb0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
   white-space: nowrap;
   overflow: hidden;
+}
+
+.sidebar-title-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* ===== NAV ===== */
@@ -91,107 +100,128 @@
   margin-bottom: 8px;
 }
 
-/* ===== LINK ===== */
-.sidebar-link {
+/* ===== LINKS ===== */
+.sidebar-link,
+.playlist-item {
+  position: relative;
+  width: 100%;
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: 12px 0;
-  padding-left: 20px;
-  color: #b3b3b3;
+  gap: 14px;
+  padding: 12px 18px 12px 20px;
+  border: none;
+  border-left: 3px solid transparent;
+  background: transparent;
+  color: #b6c0d7;
   text-decoration: none;
-  font-size: 0.95rem;
-  transition: all 0.3s;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
-  border-left: 3px solid transparent;
+  transition: all 0.22s ease;
 }
 
-.sidebar-link svg {
+.sidebar-link svg,
+.playlist-item svg {
   flex-shrink: 0;
-  font-size: 1.1rem;
+  font-size: 16px;
 }
 
-.sidebar-link span {
+.sidebar-link span,
+.playlist-item span {
   opacity: 1;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.18s ease;
 }
 
 .sidebar-link:hover,
+.playlist-item:hover {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.05);
+}
+
 .sidebar-link.active {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
-  border-left: 3px solid #1db954;
+  color: #ecfeff;
+  background: linear-gradient(
+    90deg,
+    rgba(99, 102, 241, 0.18),
+    rgba(6, 182, 212, 0.08)
+  );
+  border-left-color: #67e8f9;
 }
 
-/* ===== COLLAPSED - căn giữa icon ===== */
-.sidebar.collapsed .sidebar-link {
-  padding-left: 0;
-  justify-content: center;
+.sidebar-link.active::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #67e8f9;
+  box-shadow: 0 0 12px rgba(103, 232, 249, 0.4);
 }
 
-.sidebar.collapsed .sidebar-link span {
-  opacity: 0;
-  width: 0;
-  pointer-events: none;
+.sidebar-link-admin {
+  color: #f0e7ff;
 }
 
-/* ===== PLAYLISTS ===== */
-.sidebar-playlists {
-  margin-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding-top: 10px;
+.sidebar-link-admin:hover,
+.sidebar-link-admin.active {
+  background: linear-gradient(
+    90deg,
+    rgba(168, 85, 247, 0.18),
+    rgba(99, 102, 241, 0.1)
+  );
+  border-left-color: #c084fc;
 }
 
-.playlist-item {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 10px 0;
-  padding-left: 20px;
-  color: #b3b3b3;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.3s;
-  white-space: nowrap;
-  overflow: hidden;
-  border-left: 3px solid transparent;
-}
-
-.playlist-item svg {
-  flex-shrink: 0;
-  font-size: 1rem;
-}
-
-.playlist-item span {
-  opacity: 1;
-  transition: opacity 0.2s ease;
-}
-
+/* ===== COLLAPSED ===== */
+.sidebar.collapsed .sidebar-link,
 .sidebar.collapsed .playlist-item {
   padding-left: 0;
+  padding-right: 0;
   justify-content: center;
 }
 
+.sidebar.collapsed .sidebar-link span,
 .sidebar.collapsed .playlist-item span {
   opacity: 0;
   width: 0;
   pointer-events: none;
 }
 
-.playlist-item:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.05);
-  border-left-color: rgba(29, 185, 84, 0.4);
+.sidebar.collapsed .sidebar-link.active::after {
+  right: 8px;
 }
 
-/* ===== CÁC PLAYLIST ===== */
+/* ===== PLAYLIST / EXPLORE ===== */
+.sidebar-playlists {
+  margin-top: 18px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.playlist-item {
+  color: #9fb0d2;
+}
+
+.playlist-item:hover {
+  border-left-color: rgba(103, 232, 249, 0.22);
+}
+
+.sidebar-admin {
+  margin-top: 18px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ===== UNUSED LEGACY SUPPORT ===== */
 .sidebar-user-playlists {
   margin-top: 8px;
   padding: 0 8px;
 }
 
-/* Header section: title + nút tạo */
 .sidebar-section-header {
   display: flex;
   align-items: center;
@@ -199,55 +229,51 @@
   margin-bottom: 4px;
 }
 
-/* Nút tạo playlist mới */
 .btn-create-playlist {
-  background: none;
   border: none;
-  color: #aaa;
+  background: none;
+  color: #8fa0bd;
   cursor: pointer;
   padding: 4px 6px;
-  border-radius: 50%;
+  border-radius: 999px;
   font-size: 12px;
   display: flex;
   align-items: center;
-  transition: color 0.2s, background 0.2s;
-  flex-shrink: 0; /* ✅ không bị co khi collapsed */
+  transition: color 0.2s ease, background 0.2s ease;
+  flex-shrink: 0;
 }
 
 .btn-create-playlist:hover {
   color: #fff;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
 }
 
-/* Danh sách playlist */
 .user-playlist-list {
   list-style: none;
   padding: 0;
   margin: 0;
-  /* ✅ Giới hạn chiều cao, có scroll nếu nhiều playlist */
   max-height: 200px;
   overflow-y: auto;
 }
 
-/* Ẩn scrollbar nhưng vẫn scroll được */
 .user-playlist-list::-webkit-scrollbar {
-  width: 3px;
-}
-.user-playlist-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
+  width: 4px;
 }
 
-/* Link playlist */
+.user-playlist-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+
 .playlist-link {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 7px 8px;
-  border-radius: 6px;
-  color: #ccc;
+  border-radius: 8px;
+  color: #cbd5e1;
   text-decoration: none;
-  transition: background 0.2s, color 0.2s;
+  transition: background 0.2s ease, color 0.2s ease;
   white-space: nowrap;
   overflow: hidden;
 }
@@ -258,14 +284,14 @@
 }
 
 .playlist-link.active {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(99, 102, 241, 0.16);
   color: #fff;
 }
 
 .playlist-icon {
   font-size: 14px;
   flex-shrink: 0;
-  color: #1db954; /* ✅ màu xanh nổi bật */
+  color: #7dd3fc;
 }
 
 .playlist-name {
@@ -274,11 +300,10 @@
   text-overflow: ellipsis;
 }
 
-/* Trạng thái loading / empty */
 .playlist-loading,
 .playlist-empty {
   font-size: 12px;
-  color: #888;
+  color: #7f8fb0;
   padding: 6px 8px;
   margin: 0;
   font-style: italic;

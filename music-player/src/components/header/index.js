@@ -1,60 +1,81 @@
-// src/components/header/index.js
-import React, { useState, useRef, useEffect } from "react";
+// components/Header/index.js
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FaMusic, FaUser, FaChevronDown } from "react-icons/fa";
+import { FaUser, FaChevronDown } from "react-icons/fa";
 import { useAuth } from "../../context/AuthContext";
 import { useBackground } from "./useBackground";
 import UserDropdown from "./UserDropdown";
 import BackgroundPanel from "./BackgroundPanel";
 import SearchBar from "../SearchBar";
-import NotificationBell from "./NotificationBell"; // 👈 THÊM
+import NotificationBell from "./NotificationBell";
 import "../Header.css";
 import getAvatarURL from "../../utils/getAvatarURL";
-import logoImg from "../../assets/barbara-genshin-impact.gif"; // ✅ THÊM LOGO
+import logoImg from "../../assets/barbara-genshin-impact.gif";
+
+const DEFAULT_AVATAR = "/images/default-avatar.png";
 
 const Header = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
-  const [showMenu,    setShowMenu]    = useState(false);
+  const menuRef = useRef(null);
+
+  // ✅ Giữ lại 2 state như flow cũ
+  const [showMenu, setShowMenu] = useState(false);
   const [showBgPanel, setShowBgPanel] = useState(false);
-  const menuRef   = useRef(null);
+
   const avatarURL = getAvatarURL(user?.avatar, 40);
 
   const { activeBg, getBgKey, applyBackground, resetBackground } =
     useBackground(user?._id);
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setShowMenu(false);
-        setShowBgPanel(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+  const closeAllPanels = useCallback(() => {
+    setShowMenu(false);
+    setShowBgPanel(false);
   }, []);
 
-  const handleLogout = () => {
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        closeAllPanels();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [closeAllPanels]);
+
+  const handleLogout = useCallback(() => {
     resetBackground();
-    setShowMenu(false);
-    setShowBgPanel(false);
+    closeAllPanels();
     logout();
-  };
+  }, [resetBackground, closeAllPanels, logout]);
 
-  const handleNavigate = (path) => {
-    setShowMenu(false);
+  const handleNavigate = useCallback(
+    (path) => {
+      closeAllPanels();
+      navigate(path);
+    },
+    [closeAllPanels, navigate]
+  );
+
+  const handleToggleMenu = useCallback(() => {
+    setShowMenu((prev) => !prev);
     setShowBgPanel(false);
-    navigate(path);
-  };
+  }, []);
 
-return (
+  const handleShowBgPanel = useCallback(() => {
+    setShowBgPanel(true);
+  }, []);
+
+  const handleBackToMenu = useCallback(() => {
+    setShowBgPanel(false);
+  }, []);
+
+  return (
     <header className="header">
-
-      {/* ===== BÊN TRÁI: Logo + SearchBar ===== */}
+      {/* ===== LEFT ===== */}
       <div className="header-left">
         <Link to="/" className="header-logo">
-
-          {/* ✅ Dùng ảnh thay vì FaMusic */}
           <div className="logo-icon-wrapper">
             <img
               src={logoImg}
@@ -67,27 +88,32 @@ return (
             <span className="logo-wave-6" />
             <span className="logo-wave-7" />
           </div>
-
           <h1>ChillWithF</h1>
         </Link>
+
         <SearchBar />
       </div>
 
-      {/* ===== BÊN PHẢI: giữ nguyên ===== */}
+      {/* ===== RIGHT ===== */}
       <div className="header-user">
         {isAuthenticated ? (
           <>
             <NotificationBell />
+
             <div className="user-menu-wrapper" ref={menuRef}>
               <button
+                type="button"
                 className={`user-trigger ${showMenu ? "active" : ""}`}
-                onClick={() => { setShowMenu(!showMenu); setShowBgPanel(false); }}
+                onClick={handleToggleMenu}
+                aria-label="Mở menu người dùng"
               >
                 <img
                   src={avatarURL}
                   alt="avatar"
                   className="user-avatar"
-                  onError={(e) => { e.target.src = "https://i.pravatar.cc/40"; }}
+                  onError={(e) => {
+                    e.currentTarget.src = DEFAULT_AVATAR;
+                  }}
                 />
                 <span className="user-name">{user?.username}</span>
                 <FaChevronDown className={`chevron ${showMenu ? "rotated" : ""}`} />
@@ -97,7 +123,7 @@ return (
                 <UserDropdown
                   user={user}
                   onNavigate={handleNavigate}
-                  onShowBgPanel={() => setShowBgPanel(true)}
+                  onShowBgPanel={handleShowBgPanel}
                   onLogout={handleLogout}
                 />
               )}
@@ -108,8 +134,8 @@ return (
                   getBgKey={getBgKey}
                   onApply={applyBackground}
                   onReset={resetBackground}
-                  onBack={() => setShowBgPanel(false)}
-                  onClose={() => { setShowMenu(false); setShowBgPanel(false); }}
+                  onBack={handleBackToMenu}
+                  onClose={closeAllPanels}
                 />
               )}
             </div>
@@ -120,9 +146,8 @@ return (
           </Link>
         )}
       </div>
-
-  </header>
-);
+    </header>
+  );
 };
 
 export default Header;

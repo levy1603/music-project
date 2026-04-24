@@ -1,5 +1,11 @@
-// src/pages/SongDetail.js
-import React, { useState, useEffect, useRef } from "react";
+// pages/SongDetail.jsx
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   FaPlay,
@@ -16,22 +22,329 @@ import {
   FaSave,
   FaSpinner,
   FaChevronLeft,
-  FaChevronRight,
   FaVideo,
   FaAlignLeft,
   FaPlus,
+  FaMicrophone,
 } from "react-icons/fa";
 import songAPI from "../api/songAPI";
 import { useMusicContext } from "../context/MusicContext";
 import { useAuth } from "../context/AuthContext";
 import AddToPlaylistModal from "../components/playlist/AddToPlaylistModal";
+import { parseLRC, getCurrentLineIndex } from "../utils/lrcParser";
 import "./SongDetail.css";
 import getAvatarURL from "../utils/getAvatarURL";
 
+const DEFAULT_AVATAR = "/images/default-avatar.png";
+const DEFAULT_COVER = "/images/default-cover.jpg";
+
+/* ══════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════ */
+const formatDate = (dateString) =>
+  new Date(dateString).toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+const getSafeCoverURL = (song, getCoverURL) => {
+  if (!song) return DEFAULT_COVER;
+  return getCoverURL(song) || DEFAULT_COVER;
+};
+
+/* ══════════════════════════════════════════
+   SUB: KaraokeLyrics
+══════════════════════════════════════════ */
+const KaraokeLyrics = React.memo(({ lrcText, currentTime }) => {
+  const [lines, setLines] = useState([]);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const activeLineRef = useRef(null);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const parsedLines = lrcText ? parseLRC(lrcText) : [];
+    setLines(parsedLines);
+    setActiveIndex(-1);
+  }, [lrcText]);
+
+  useEffect(() => {
+    setActiveIndex(getCurrentLineIndex(lines, currentTime));
+  }, [lines, currentTime]);
+
+  useEffect(() => {
+    if (activeLineRef.current && containerRef.current) {
+      activeLineRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [activeIndex]);
+
+  if (!lines.length) return null;
+
+  return (
+    <div className="karaoke-container" ref={containerRef}>
+      <div className="karaoke-badge">
+        <FaMicrophone /> Karaoke
+      </div>
+
+      <div className="karaoke-lines">
+        {lines.map((line, index) => {
+          const isActive = index === activeIndex;
+          const isPast = index < activeIndex;
+
+          return (
+            <div
+              key={`${line.time}-${index}`}
+              ref={isActive ? activeLineRef : null}
+              className={[
+                "karaoke-line",
+                isActive ? "karaoke-active" : "",
+                isPast ? "karaoke-past" : "",
+                !isActive && !isPast ? "karaoke-future" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              {isActive && <div className="karaoke-line-indicator" />}
+              <span className="karaoke-line-text">{line.text}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+
+KaraokeLyrics.displayName = "KaraokeLyrics";
+
+/* ══════════════════════════════════════════
+   SUB: LyricsDisplay
+══════════════════════════════════════════ */
+const LyricsDisplay = React.memo(
+  ({
+    song,
+    currentTime,
+    isCurrentSong,
+    isPlaying,
+    isAuthenticated,
+    onEditClick,
+  }) => {
+    const [viewMode, setViewMode] = useState("auto");
+
+    useEffect(() => {
+      setViewMode("auto");
+    }, [song?._id]);
+
+    const hasLRC = !!song?.lrc;
+    const hasLyrics = !!song?.lyrics;
+    const hasAnyContent = hasLRC || hasLyrics;
+
+    const showKaraoke = hasLRC && isCurrentSong && viewMode !== "plain";
+    const showLRCHint = hasLRC && !isCurrentSong && viewMode !== "plain";
+    const showPlain =
+      hasLyrics && (viewMode === "plain" || (!showKaraoke && !showLRCHint));
+
+    return (
+      <div className="song-lyrics-section">
+        <div className="lyrics-header">
+          <h2>🎤 Lời bài hát</h2>
+
+          <div className="lyrics-header-actions">
+            {hasLRC && hasLyrics && (
+              <div className="lyrics-view-toggle">
+                <button
+                  type="button"
+                  className={`view-toggle-btn ${
+                    viewMode !== "plain" ? "active" : ""
+                  }`}
+                  onClick={() => setViewMode("auto")}
+                >
+                  <FaMicrophone /> Karaoke
+                </button>
+
+                <button
+                  type="button"
+                  className={`view-toggle-btn ${
+                    viewMode === "plain" ? "active" : ""
+                  }`}
+                  onClick={() => setViewMode("plain")}
+                >
+                  <FaAlignLeft /> Thường
+                </button>
+              </div>
+            )}
+
+            {hasLRC && (
+              <span className="lrc-indicator-badge">
+                <FaMicrophone /> LRC
+              </span>
+            )}
+
+            {isAuthenticated && (
+              <button
+                type="button"
+                className="edit-lyrics-btn"
+                onClick={onEditClick}
+              >
+                <FaEdit /> {hasAnyContent ? "Sửa lời" : "Thêm lời"}
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="lyrics-content">
+          {showKaraoke && (
+            <KaraokeLyrics lrcText={song.lrc} currentTime={currentTime} />
+          )}
+
+          {showLRCHint && (
+            <div className="lrc-hint">
+              <FaMicrophone className="lrc-hint-icon" />
+              <p>Bài hát này có lời đồng bộ (Karaoke)</p>
+              <span>Nhấn phát nhạc để xem hiệu ứng karaoke</span>
+            </div>
+          )}
+
+          {showPlain && <pre className="lyrics-text">{song.lyrics}</pre>}
+
+          {!hasAnyContent && (
+            <div className="no-lyrics">
+              <FaMusic className="no-lyrics-icon" />
+              <p>Chưa có lời bài hát</p>
+
+              {isAuthenticated ? (
+                <button
+                  type="button"
+                  className="add-lyrics-btn"
+                  onClick={onEditClick}
+                >
+                  <FaEdit /> Thêm lời bài hát
+                </button>
+              ) : (
+                <p className="login-hint">Đăng nhập để thêm lời bài hát</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+);
+
+LyricsDisplay.displayName = "LyricsDisplay";
+
+/* ══════════════════════════════════════════
+   SUB: VideoPlayer
+══════════════════════════════════════════ */
+const VideoPlayer = React.memo(
+  ({ videoURL, videoRef, song, getCoverURL, isPlaying, onPlayToggle }) => {
+    if (!videoURL) {
+      return (
+        <div className="no-video">
+          <FaVideo className="no-video-icon" />
+          <p>Bài hát này chưa có video</p>
+          <span>Hãy upload video trong phần chỉnh sửa bài hát</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="video-player-wrapper">
+        <video
+          ref={videoRef}
+          className="song-video-player"
+          src={videoURL}
+          poster={getSafeCoverURL(song, getCoverURL)}
+          preload="metadata"
+          muted
+          playsInline
+        />
+
+        <div className="video-overlay" onClick={onPlayToggle}>
+          <div className={`video-play-icon ${isPlaying ? "hide" : ""}`}>
+            <FaPlay />
+          </div>
+        </div>
+      </div>
+    );
+  }
+);
+
+VideoPlayer.displayName = "VideoPlayer";
+
+/* ══════════════════════════════════════════
+   SUB: TabSwitcher
+══════════════════════════════════════════ */
+const TabSwitcher = React.memo(
+  ({
+    collapsed,
+    activeTab,
+    miniActiveTabs,
+    onTabToggle,
+    onMiniTabToggle,
+    videoURL,
+    hasLRC,
+    isThisSongPlaying,
+  }) => {
+    const isActive = useCallback(
+      (tab) => (collapsed ? miniActiveTabs.has(tab) : activeTab === tab),
+      [collapsed, miniActiveTabs, activeTab]
+    );
+
+    const handleToggle = useCallback(
+      (tab) => {
+        if (collapsed) onMiniTabToggle(tab);
+        else onTabToggle(tab);
+      },
+      [collapsed, onMiniTabToggle, onTabToggle]
+    );
+
+    return (
+      <div className="tab-icon-switcher">
+        <button
+          type="button"
+          className={`tab-icon-btn ${isActive("lyrics") ? "active" : ""}`}
+          onClick={() => handleToggle("lyrics")}
+          title="Lời bài hát"
+        >
+          <FaAlignLeft />
+          {hasLRC && <span className="lrc-dot" title="Có LRC" />}
+        </button>
+
+        <button
+          type="button"
+          className={`tab-icon-btn ${isActive("video") ? "active" : ""} ${
+            !videoURL ? "disabled" : ""
+          }`}
+          onClick={() => handleToggle("video")}
+          title={!videoURL ? "Chưa có video" : "Video"}
+          disabled={!videoURL}
+        >
+          <FaVideo />
+
+          {isThisSongPlaying && isActive("video") && videoURL && (
+            <span className="playing-dot-icon" />
+          )}
+
+          {!videoURL && <span className="no-video-dot" />}
+        </button>
+      </div>
+    );
+  }
+);
+
+TabSwitcher.displayName = "TabSwitcher";
+
+/* ══════════════════════════════════════════
+   MAIN: SongDetail
+══════════════════════════════════════════ */
 const SongDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+
   const {
     currentSong,
     isPlaying,
@@ -44,127 +357,221 @@ const SongDetail = () => {
     currentTime,
   } = useMusicContext();
 
-  const [song, setSong]                       = useState(null);
-  const [loading, setLoading]                 = useState(true);
-  const [error, setError]                     = useState("");
-  const [collapsed, setCollapsed]             = useState(false);
-  const [activeTab, setActiveTab]             = useState(null);
-  const [miniActiveTabs, setMiniActiveTabs]   = useState(new Set());
+  const [song, setSong] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const [collapsed, setCollapsed] = useState(false);
+  const [activeTab, setActiveTab] = useState(null);
+  const [miniActiveTabs, setMiniActiveTabs] = useState(new Set());
+
   const [showLyricsModal, setShowLyricsModal] = useState(false);
-  const [newLyrics, setNewLyrics]             = useState("");
-  const [savingLyrics, setSavingLyrics]       = useState(false);
-  const [showAddModal, setShowAddModal]       = useState(false);
+  const [newLyrics, setNewLyrics] = useState("");
+  const [lyricsError, setLyricsError] = useState("");
+  const [savingLyrics, setSavingLyrics] = useState(false);
+
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const videoRef = useRef(null);
+  const miniVideoRef = useRef(null);
 
-  // ===== FETCH KHI id THAY ĐỔI =====
+  const isCurrentSong = useMemo(() => {
+    return !!(currentSong && currentSong._id === song?._id);
+  }, [currentSong, song]);
+
+  const isThisSongPlaying = useMemo(() => {
+    return isCurrentSong && isPlaying;
+  }, [isCurrentSong, isPlaying]);
+
+  const videoURL = useMemo(() => {
+    return song ? songAPI.getVideoURL(song) : null;
+  }, [song]);
+
+  const coverURL = useMemo(() => {
+    return getSafeCoverURL(song, getCoverURL);
+  }, [song, getCoverURL]);
+
+  /* ── fetch song ── */
   useEffect(() => {
+    let cancelled = false;
+
     const fetchSongDetail = async () => {
       try {
         setLoading(true);
         setError("");
+
         const res = await songAPI.getById(id);
-        setSong(res.data);
-        setNewLyrics(res.data.lyrics || "");
+        const songData = res.data;
+
+        if (cancelled) return;
+
+        setSong(songData);
+        setNewLyrics(songData.lyrics || "");
         setActiveTab(null);
         setMiniActiveTabs(new Set());
-      } catch (err) {
-        setError("Không tìm thấy bài hát");
+      } catch {
+        if (!cancelled) {
+          setError("Không tìm thấy bài hát");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
+
     fetchSongDetail();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
-  // ===== LẮNG NGHE currentSong THAY ĐỔI =====
+  /* ── sync video play/pause ── */
   useEffect(() => {
-    if (!currentSong) return;
-    if (currentSong._id !== id) {
-      navigate(`/song/${currentSong._id}`, { replace: true });
+    const video = videoRef.current;
+    if (!video || !isCurrentSong || !videoURL) return;
+
+    let cancelled = false;
+
+    if (isPlaying) {
+      video.play().catch((err) => {
+        if (!cancelled && err.name !== "AbortError") {
+          console.warn("Video play failed:", err.message);
+        }
+      });
+    } else {
+      video.pause();
     }
-  }, [currentSong?._id]);
 
-  // ===== ĐỒNG BỘ VIDEO - play/pause =====
+    return () => {
+      cancelled = true;
+    };
+  }, [isCurrentSong, isPlaying, videoURL]);
+
+  useEffect(() => {
+    const video = miniVideoRef.current;
+    if (!video || !isCurrentSong || !videoURL) return;
+
+    let cancelled = false;
+
+    if (isPlaying) {
+      video.play().catch((err) => {
+        if (!cancelled && err.name !== "AbortError") {
+          console.warn("Mini video play failed:", err.message);
+        }
+      });
+    } else {
+      video.pause();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isCurrentSong, isPlaying, videoURL]);
+
+  /* ── sync currentTime -> video ── */
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
-    const isCurrentSong = currentSong && currentSong._id === song?._id;
-    if (!isCurrentSong) return;
-    if (isPlaying) video.play().catch(() => {});
-    else video.pause();
-  }, [isPlaying, currentSong, song]);
+    if (!video || !isCurrentSong) return;
 
-  // ===== ĐỒNG BỘ VIDEO - seek =====
+    if (Math.abs(video.currentTime - currentTime) > 2) {
+      video.currentTime = currentTime;
+    }
+  }, [isCurrentSong, currentTime]);
+
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    const isCurrentSong = currentSong && currentSong._id === song?._id;
-    if (!isCurrentSong) return;
-    const diff = Math.abs(video.currentTime - currentTime);
-    if (diff > 2) video.currentTime = currentTime;
-  }, [currentTime, currentSong, song]);
+    const video = miniVideoRef.current;
+    if (!video || !isCurrentSong) return;
 
-  const isCurrentSong     = currentSong && currentSong._id === song?._id;
-  const isThisSongPlaying = isCurrentSong && isPlaying;
+    if (Math.abs(video.currentTime - currentTime) > 2) {
+      video.currentTime = currentTime;
+    }
+  }, [isCurrentSong, currentTime]);
 
-  const handlePlay = () => {
+  /* ── handlers ── */
+  const handlePlay = useCallback(() => {
+    if (!song) return;
+
     if (isCurrentSong) togglePlay();
     else playSong(song);
-  };
+  }, [song, isCurrentSong, togglePlay, playSong]);
 
-  // Full view: chỉ 1 tab tại 1 thời điểm
-  const handleTabToggle = (tab) => {
-    if (tab === "video" && !videoURL) return;
-    setActiveTab((prev) => (prev === tab ? null : tab));
-  };
+  const handleTabToggle = useCallback(
+    (tab) => {
+      if (tab === "video" && !videoURL) return;
+      setActiveTab((prev) => (prev === tab ? null : tab));
+    },
+    [videoURL]
+  );
 
-  // Mini view: nhiều tab cùng lúc
-  const handleMiniTabToggle = (tab) => {
-    if (tab === "video" && !videoURL) return;
-    setMiniActiveTabs((prev) => {
-      const next = new Set(prev);
-      if (next.has(tab)) next.delete(tab);
-      else next.add(tab);
-      return next;
-    });
-  };
+  const handleMiniTabToggle = useCallback(
+    (tab) => {
+      if (tab === "video" && !videoURL) return;
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
+      setMiniActiveTabs((prev) => {
+        const next = new Set(prev);
+        if (next.has(tab)) next.delete(tab);
+        else next.add(tab);
+        return next;
+      });
+    },
+    [videoURL]
+  );
 
-  const openLyricsModal = () => {
+  const openLyricsModal = useCallback(() => {
     if (!isAuthenticated) {
-      alert("Vui lòng đăng nhập để thêm lời bài hát!");
+      navigate("/login", { state: { from: `/song/${id}` } });
       return;
     }
-    setNewLyrics(song.lyrics || "");
-    setShowLyricsModal(true);
-  };
 
-  const handleSaveLyrics = async () => {
+    setNewLyrics(song?.lyrics || "");
+    setLyricsError("");
+    setShowLyricsModal(true);
+  }, [isAuthenticated, navigate, id, song]);
+
+  const closeLyricsModal = useCallback(() => {
+    setShowLyricsModal(false);
+    setLyricsError("");
+  }, []);
+
+  const handleSaveLyrics = useCallback(async () => {
+    if (!song) return;
+
+    const trimmedLyrics = newLyrics.trim();
+
+    if (trimmedLyrics.length > 10000) {
+      setLyricsError("Lời bài hát không được vượt quá 10,000 ký tự!");
+      return;
+    }
+
     setSavingLyrics(true);
+    setLyricsError("");
+
     try {
       const formData = new FormData();
-      formData.append("lyrics", newLyrics);
+      formData.append("lyrics", trimmedLyrics);
+
       await songAPI.update(song._id, formData);
-      setSong({ ...song, lyrics: newLyrics });
+
+      setSong((prev) => ({
+        ...prev,
+        lyrics: trimmedLyrics,
+      }));
+
       setShowLyricsModal(false);
       fetchSongs();
     } catch (err) {
-      alert("Lỗi khi lưu lời bài hát!");
+      setLyricsError(
+        err.response?.data?.message || "Lỗi khi lưu lời bài hát!"
+      );
     } finally {
       setSavingLyrics(false);
     }
-  };
+  }, [song, newLyrics, fetchSongs]);
 
-  // ===== LOADING =====
+  /* ── loading / error ── */
   if (loading) {
     return (
       <div className="song-detail-page">
@@ -176,13 +583,16 @@ const SongDetail = () => {
     );
   }
 
-  // ===== ERROR =====
   if (error || !song) {
     return (
       <div className="song-detail-page">
         <div className="error-container">
           <p>{error || "Không tìm thấy bài hát"}</p>
-          <button onClick={() => navigate(-1)} className="back-btn">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="back-btn"
+          >
             <FaArrowLeft /> Quay lại
           </button>
         </div>
@@ -190,37 +600,44 @@ const SongDetail = () => {
     );
   }
 
-  const videoURL = songAPI.getVideoURL(song);
-
   return (
     <div className="song-detail-page">
-
-      {/* ===== CỘT TRÁI CỐ ĐỊNH: back-button + mini-view ===== */}
+      {/* LEFT SIDEBAR */}
       <div className="left-sidebar">
-
-        {/* Nút quay lại - luôn hiển thị */}
-        <button onClick={() => navigate(-1)} className="back-button">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="back-button"
+        >
           <FaArrowLeft />
         </button>
 
-        {/* Mini view - chỉ hiện khi collapsed */}
         {collapsed && (
           <div className="mini-view" onClick={() => setCollapsed(false)}>
             <div className={`mini-vinyl ${isThisSongPlaying ? "spinning" : ""}`}>
               <div
                 className="mini-vinyl-bg"
-                style={{ backgroundImage: `url(${getCoverURL(song)})` }}
+                style={{ backgroundImage: `url(${coverURL})` }}
               />
               <div className="mini-vinyl-overlay" />
               <div className="mini-vinyl-hole" />
             </div>
+
             <div className="mini-info">
               <span className="mini-title">{song.title}</span>
-              <span className="mini-artist">{song.artist}</span>
+              <span className="mini-artist">
+                {song.artist}
+                {song.featuring ? ` ft. ${song.featuring}` : ""}
+              </span>
             </div>
+
             <button
+              type="button"
               className="mini-play-btn"
-              onClick={(e) => { e.stopPropagation(); handlePlay(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePlay();
+              }}
             >
               {isThisSongPlaying ? <FaPause /> : <FaPlay />}
             </button>
@@ -228,13 +645,12 @@ const SongDetail = () => {
         )}
       </div>
 
-      {/* ===== NỘI DUNG CHÍNH ===== */}
+      {/* MAIN CONTAINER */}
       <div className={`song-detail-container ${collapsed ? "collapsed" : ""}`}>
-
-        {/* ===== PANEL TRÁI: ẩn khi collapsed ===== */}
         {!collapsed && (
           <div className="song-info-section">
             <button
+              type="button"
               className="collapse-btn"
               onClick={() => setCollapsed(true)}
               title="Thu gọn"
@@ -243,70 +659,111 @@ const SongDetail = () => {
             </button>
 
             <div className="panel-content">
-
-              {/* ĐĨA NHẠC */}
+              {/* VINYL */}
               <div className="vinyl-wrapper">
-                <div className={`vinyl-needle ${isThisSongPlaying ? "playing" : ""}`}>
-                  <div className="needle-base"></div>
-                  <div className="needle-arm"></div>
-                  <div className="needle-head"></div>
+                <div
+                  className={`vinyl-needle ${isThisSongPlaying ? "playing" : ""}`}
+                >
+                  <div className="needle-base" />
+                  <div className="needle-arm" />
+                  <div className="needle-head" />
                 </div>
+
                 <div
                   className={`vinyl-disk ${isThisSongPlaying ? "spinning" : ""}`}
-                  style={{ backgroundImage: `url(${getCoverURL(song)})` }}
+                  style={{ backgroundImage: `url(${coverURL})` }}
                 >
-                  <div className="vinyl-overlay"></div>
+                  <div className="vinyl-overlay" />
                   <div className="vinyl-grooves">
-                    <div className="vinyl-groove groove-1"></div>
-                    <div className="vinyl-groove groove-2"></div>
-                    <div className="vinyl-groove groove-3"></div>
-                    <div className="vinyl-groove groove-4"></div>
-                    <div className="vinyl-groove groove-5"></div>
-                    <div className="vinyl-groove groove-6"></div>
+                    {[1, 2, 3, 4, 5, 6].map((n) => (
+                      <div key={n} className={`vinyl-groove groove-${n}`} />
+                    ))}
                   </div>
                   <div className="vinyl-center-ring">
-                    <div className="vinyl-hole"></div>
+                    <div className="vinyl-hole" />
                   </div>
-                  <div className="vinyl-shine"></div>
+                  <div className="vinyl-shine" />
                 </div>
               </div>
 
-              {/* THÔNG TIN */}
+              {/* META */}
               <div className="song-meta">
                 <h1 className="song-detail-title">{song.title}</h1>
-                <p className="song-detail-artist">{song.artist}</p>
+
+                <p className="song-detail-artist">
+                  {song.artist}
+                  {song.featuring && (
+                    <span className="song-detail-featuring">
+                      {" "}
+                      ft. {song.featuring}
+                    </span>
+                  )}
+                </p>
 
                 <div className="song-stats">
                   <div className="stat-item">
                     <FaCompactDisc />
                     <span>{song.album || "Single"}</span>
                   </div>
+
                   <div className="stat-item">
                     <FaMusic />
                     <span>{song.genre || "Pop"}</span>
                   </div>
+
+                  {song.releaseYear && (
+                    <div className="stat-item">
+                      <FaCalendarAlt />
+                      <span>Năm phát hành: {song.releaseYear}</span>
+                    </div>
+                  )}
+
                   <div className="stat-item">
                     <FaHeadphones />
-                    <span>{song.playCount || 0} lượt nghe</span>
+                    <span>{song.playCount?.toLocaleString() || 0} lượt nghe</span>
                   </div>
+
                   <div className="stat-item">
                     <FaCalendarAlt />
-                    <span>{formatDate(song.createdAt)}</span>
+                    <span>Đăng ngày: {formatDate(song.createdAt)}</span>
                   </div>
                 </div>
 
-                {/* ACTIONS */}
+                {song.lrc && (
+                  <div className="song-lrc-badge">
+                    <FaMicrophone /> Có lời đồng bộ Karaoke
+                  </div>
+                )}
+
+                {song.tags?.length > 0 && (
+                  <div className="song-tags-box">
+                    {song.tags.map((tag) => (
+                      <span key={tag} className="song-tag-item">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
                 <div className="song-actions-detail">
                   <button
-                    className={`action-btn play-btn-large ${isThisSongPlaying ? "playing" : ""}`}
+                    type="button"
+                    className={`action-btn play-btn-large ${
+                      isThisSongPlaying ? "playing" : ""
+                    }`}
                     onClick={handlePlay}
+                    aria-label={isThisSongPlaying ? "Dừng" : "Phát"}
                   >
                     {isThisSongPlaying ? <FaPause /> : <FaPlay />}
                   </button>
 
                   <button
-                    className={`action-btn fav-btn-large ${isFavorite(song._id) ? "liked" : ""}`}
+                    type="button"
+                    className={`action-btn fav-btn-large ${
+                      isFavorite(song._id) ? "liked" : ""
+                    }`}
                     onClick={() => toggleFavorite(song._id)}
+                    aria-label={isFavorite(song._id) ? "Bỏ thích" : "Yêu thích"}
                   >
                     {isFavorite(song._id) ? <FaHeart /> : <FaRegHeart />}
                     {isFavorite(song._id) ? "Đã thích" : "Yêu thích"}
@@ -314,6 +771,7 @@ const SongDetail = () => {
 
                   {isAuthenticated && (
                     <button
+                      type="button"
                       className="action-btn add-pl-btn"
                       onClick={() => setShowAddModal(true)}
                     >
@@ -322,14 +780,15 @@ const SongDetail = () => {
                   )}
                 </div>
 
-                {/* Uploader */}
                 {song.uploadedBy && (
                   <div className="uploader-info">
                     <img
                       src={getAvatarURL(song.uploadedBy.avatar, 30)}
-                      alt="uploader"
+                      alt={song.uploadedBy.username}
                       className="uploader-avatar"
-                      onError={(e) => { e.target.src = "https://i.pravatar.cc/30"; }}
+                      onError={(e) => {
+                        e.currentTarget.src = DEFAULT_AVATAR;
+                      }}
                     />
                     <span>
                       Upload bởi <strong>{song.uploadedBy.username}</strong>
@@ -341,257 +800,147 @@ const SongDetail = () => {
           </div>
         )}
 
-        {/* ===== PANEL PHẢI ===== */}
+        {/* RIGHT */}
         <div className="song-right-section">
+          <TabSwitcher
+            collapsed={collapsed}
+            activeTab={activeTab}
+            miniActiveTabs={miniActiveTabs}
+            onTabToggle={handleTabToggle}
+            onMiniTabToggle={handleMiniTabToggle}
+            videoURL={videoURL}
+            hasLRC={!!song.lrc}
+            isThisSongPlaying={isThisSongPlaying}
+          />
 
-          {/* ICON TABS */}
-          <div className="tab-icon-switcher">
-
-            {/* Full view: 1 tab tại 1 lúc */}
-            {!collapsed && (
-              <>
-                <button
-                  className={`tab-icon-btn ${activeTab === "lyrics" ? "active" : ""}`}
-                  onClick={() => handleTabToggle("lyrics")}
-                  title={activeTab === "lyrics" ? "Đóng lời bài hát" : "Lời bài hát"}
-                >
-                  <FaAlignLeft />
-                </button>
-                <button
-                  className={`tab-icon-btn ${activeTab === "video" ? "active" : ""} ${!videoURL ? "disabled" : ""}`}
-                  onClick={() => handleTabToggle("video")}
-                  title={
-                    !videoURL ? "Chưa có video"
-                    : activeTab === "video" ? "Đóng video"
-                    : "Video"
-                  }
-                >
-                  <FaVideo />
-                  {isThisSongPlaying && activeTab === "video" && videoURL && (
-                    <span className="playing-dot-icon" />
-                  )}
-                  {!videoURL && <span className="no-video-dot" />}
-                </button>
-              </>
-            )}
-
-            {/* ✅ Mini view: nhiều tab cùng lúc */}
-            {collapsed && (
-              <>
-                <button
-                  className={`tab-icon-btn ${miniActiveTabs.has("lyrics") ? "active" : ""}`}
-                  onClick={() => handleMiniTabToggle("lyrics")}
-                  title="Lời bài hát"
-                >
-                  <FaAlignLeft />
-                </button>
-                <button
-                  className={`tab-icon-btn ${miniActiveTabs.has("video") ? "active" : ""} ${!videoURL ? "disabled" : ""}`}
-                  onClick={() => handleMiniTabToggle("video")}
-                  title={!videoURL ? "Chưa có video" : "Video"}
-                >
-                  <FaVideo />
-                  {isThisSongPlaying && miniActiveTabs.has("video") && videoURL && (
-                    <span className="playing-dot-icon" />
-                  )}
-                  {!videoURL && <span className="no-video-dot" />}
-                </button>
-              </>
-            )}
-          </div>
-
-          {/* ===== FULL VIEW: 1 panel ===== */}
           {!collapsed && activeTab !== null && (
             <div className="tab-content">
-
-              {/* LYRICS */}
               {activeTab === "lyrics" && (
-                <div className="song-lyrics-section">
-                  <div className="lyrics-header">
-                    <h2>🎤 Lời bài hát</h2>
-                    {isAuthenticated && (
-                      <button className="edit-lyrics-btn" onClick={openLyricsModal}>
-                        <FaEdit /> {song.lyrics ? "Sửa lời" : "Thêm lời"}
-                      </button>
-                    )}
-                  </div>
-                  <div className="lyrics-content">
-                    {song.lyrics ? (
-                      <pre className="lyrics-text">{song.lyrics}</pre>
-                    ) : (
-                      <div className="no-lyrics">
-                        <FaMusic className="no-lyrics-icon" />
-                        <p>Chưa có lời bài hát</p>
-                        {isAuthenticated ? (
-                          <button className="add-lyrics-btn" onClick={openLyricsModal}>
-                            <FaEdit /> Thêm lời bài hát
-                          </button>
-                        ) : (
-                          <p className="login-hint">Đăng nhập để thêm lời bài hát</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <LyricsDisplay
+                  song={song}
+                  currentTime={currentTime}
+                  isCurrentSong={isCurrentSong}
+                  isPlaying={isThisSongPlaying}
+                  isAuthenticated={isAuthenticated}
+                  onEditClick={openLyricsModal}
+                />
               )}
 
-              {/* VIDEO */}
               {activeTab === "video" && (
                 <div className="song-video-section">
-                  {videoURL ? (
-                    <div className="video-player-wrapper">
-                      <video
-                        ref={videoRef}
-                        className="song-video-player"
-                        src={videoURL}
-                        poster={getCoverURL(song)}
-                        preload="metadata"
-                        muted
-                        playsInline
-                      />
-                      <div className="video-overlay" onClick={handlePlay}>
-                        <div className={`video-play-icon ${isThisSongPlaying ? "hide" : ""}`}>
-                          <FaPlay />
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="no-video">
-                      <FaVideo className="no-video-icon" />
-                      <p>Bài hát này chưa có video</p>
-                      <span>Hãy upload video trong phần chỉnh sửa bài hát</span>
-                    </div>
-                  )}
+                  <VideoPlayer
+                    videoURL={videoURL}
+                    videoRef={videoRef}
+                    song={song}
+                    getCoverURL={getCoverURL}
+                    isPlaying={isThisSongPlaying}
+                    onPlayToggle={handlePlay}
+                  />
                 </div>
               )}
-
             </div>
           )}
 
-          {/* ===== MINI VIEW: nhiều panel cạnh nhau ===== */}
           {collapsed && miniActiveTabs.size > 0 && (
-            <div className={`mini-panels-container ${miniActiveTabs.size === 2 ? "two-panels" : ""}`}>
-
-              {/* LYRICS PANEL */}
+            <div
+              className={`mini-panels-container ${
+                miniActiveTabs.size === 2 ? "two-panels" : ""
+              }`}
+            >
               {miniActiveTabs.has("lyrics") && (
                 <div className="tab-content mini-panel">
-                  <div className="song-lyrics-section">
-                    <div className="lyrics-header">
-                      <h2>🎤 Lời bài hát</h2>
-                      {isAuthenticated && (
-                        <button
-                          className="edit-lyrics-btn"
-                          onClick={(e) => { e.stopPropagation(); openLyricsModal(); }}
-                        >
-                          <FaEdit /> {song.lyrics ? "Sửa lời" : "Thêm lời"}
-                        </button>
-                      )}
-                    </div>
-                    <div className="lyrics-content">
-                      {song.lyrics ? (
-                        <pre className="lyrics-text">{song.lyrics}</pre>
-                      ) : (
-                        <div className="no-lyrics">
-                          <FaMusic className="no-lyrics-icon" />
-                          <p>Chưa có lời bài hát</p>
-                          {isAuthenticated ? (
-                            <button
-                              className="add-lyrics-btn"
-                              onClick={(e) => { e.stopPropagation(); openLyricsModal(); }}
-                            >
-                              <FaEdit /> Thêm lời bài hát
-                            </button>
-                          ) : (
-                            <p className="login-hint">Đăng nhập để thêm lời bài hát</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <LyricsDisplay
+                    song={song}
+                    currentTime={currentTime}
+                    isCurrentSong={isCurrentSong}
+                    isPlaying={isThisSongPlaying}
+                    isAuthenticated={isAuthenticated}
+                    onEditClick={openLyricsModal}
+                  />
                 </div>
               )}
 
-              {/* VIDEO PANEL */}
               {miniActiveTabs.has("video") && (
                 <div className="tab-content mini-panel">
                   <div className="song-video-section">
-                    {videoURL ? (
-                      <div className="video-player-wrapper">
-                        <video
-                          ref={videoRef}
-                          className="song-video-player"
-                          src={videoURL}
-                          poster={getCoverURL(song)}
-                          preload="metadata"
-                          muted
-                          playsInline
-                        />
-                        <div className="video-overlay" onClick={handlePlay}>
-                          <div className={`video-play-icon ${isThisSongPlaying ? "hide" : ""}`}>
-                            <FaPlay />
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="no-video">
-                        <FaVideo className="no-video-icon" />
-                        <p>Bài hát này chưa có video</p>
-                      </div>
-                    )}
+                    <VideoPlayer
+                      videoURL={videoURL}
+                      videoRef={miniVideoRef}
+                      song={song}
+                      getCoverURL={getCoverURL}
+                      isPlaying={isThisSongPlaying}
+                      onPlayToggle={handlePlay}
+                    />
                   </div>
                 </div>
               )}
-
             </div>
           )}
-
         </div>
       </div>
 
-      {/* ===== MODAL LYRICS ===== */}
+      {/* LYRICS MODAL */}
       {showLyricsModal && (
-        <div
-          className="lyrics-modal-overlay"
-          onClick={() => setShowLyricsModal(false)}
-        >
+        <div className="lyrics-modal-overlay" onClick={closeLyricsModal}>
           <div className="lyrics-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{song.lyrics ? "Sửa lời bài hát" : "Thêm lời bài hát"}</h3>
+
               <button
+                type="button"
                 className="modal-close-btn"
-                onClick={() => setShowLyricsModal(false)}
+                onClick={closeLyricsModal}
               >
                 <FaTimes />
               </button>
             </div>
+
             <div className="modal-body">
               <p className="modal-song-info">
-                <strong>{song.title}</strong> - {song.artist}
+                <strong>{song.title}</strong> — {song.artist}
               </p>
+
+              {lyricsError && (
+                <div className="lyrics-modal-error">
+                  <FaTimes /> {lyricsError}
+                </div>
+              )}
+
               <textarea
                 className="lyrics-textarea"
                 placeholder="Nhập lời bài hát tại đây..."
                 value={newLyrics}
                 onChange={(e) => setNewLyrics(e.target.value)}
                 rows={15}
+                maxLength={10000}
               />
+
+              <span className="lyrics-char-count">{newLyrics.length}/10,000</span>
             </div>
+
             <div className="modal-footer">
               <button
+                type="button"
                 className="modal-cancel-btn"
-                onClick={() => setShowLyricsModal(false)}
+                onClick={closeLyricsModal}
               >
                 Hủy
               </button>
+
               <button
+                type="button"
                 className="modal-save-btn"
                 onClick={handleSaveLyrics}
                 disabled={savingLyrics}
               >
                 {savingLyrics ? (
-                  <><FaSpinner className="spinner" /> Đang lưu...</>
+                  <>
+                    <FaSpinner className="spinner" /> Đang lưu...
+                  </>
                 ) : (
-                  <><FaSave /> Lưu lời bài hát</>
+                  <>
+                    <FaSave /> Lưu lời bài hát
+                  </>
                 )}
               </button>
             </div>
@@ -599,14 +948,13 @@ const SongDetail = () => {
         </div>
       )}
 
-      {/* ===== MODAL THÊM VÀO PLAYLIST ===== */}
+      {/* ADD TO PLAYLIST */}
       {showAddModal && (
         <AddToPlaylistModal
           song={song}
           onClose={() => setShowAddModal(false)}
         />
       )}
-
     </div>
   );
 };

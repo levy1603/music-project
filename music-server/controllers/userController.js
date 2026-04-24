@@ -1,6 +1,7 @@
 // controllers/userController.js
 const User        = require("../models/User");
 const Song        = require("../models/Song");
+const Playlist    = require("../models/Playlist");
 const PlayHistory = require("../models/PlayHistory"); // 👈 THÊM
 const path        = require("path");
 const fs          = require("fs");
@@ -15,6 +16,7 @@ const getFavorites = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id).populate({
       path: "favorites",
+      match: { status: "approved", isDeleted: { $ne: true } },
       populate: { path: "uploadedBy", select: "username avatar" },
     });
     res.status(200).json({
@@ -110,6 +112,7 @@ const deleteUser = async (req, res, next) => {
       return res.status(403).json({ success: false, message: "Không thể xóa tài khoản Admin!" });
     }
     await Song.deleteMany({ uploadedBy: req.params.id });
+    await Playlist.deleteMany({ owner: req.params.id });
     await User.findByIdAndDelete(req.params.id);
     res.status(200).json({ success: true, message: "Xóa người dùng thành công" });
   } catch (error) { next(error); }

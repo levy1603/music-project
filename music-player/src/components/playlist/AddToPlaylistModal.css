@@ -3,131 +3,138 @@
 .atp-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  z-index: 2000;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
-  backdrop-filter: blur(4px);
+  padding: 20px;
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .atp-modal {
-  background: #1e1e1e;
-  border-radius: 16px;
   width: 100%;
   max-width: 420px;
   max-height: 80vh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  border: 1px solid #333;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
+  border-radius: 20px;
+  background: rgba(12, 18, 35, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
 }
 
-/* Header */
 .atp-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  gap: 12px;
   padding: 20px 20px 16px;
-  border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
 }
 
 .atp-header h3 {
-  font-size: 18px;
-  font-weight: 700;
-  color: #fff;
   margin: 0 0 6px;
+  color: #f8fafc;
+  font-size: 18px;
+  font-weight: 800;
 }
 
 .atp-song-name {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
-  color: #aaa;
   margin: 0;
+  color: #94a3b8;
+  font-size: 13px;
 }
 
 .atp-close {
-  background: none;
+  width: 36px;
+  height: 36px;
   border: none;
-  color: #aaa;
-  font-size: 18px;
+  border-radius: 10px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 16px;
   cursor: pointer;
-  padding: 4px;
-  transition: color 0.2s;
   flex-shrink: 0;
+  transition: all 0.2s ease;
 }
 
-.atp-close:hover { color: #fff; }
+.atp-close:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
 
-/* Error */
 .atp-error {
-  font-size: 13px;
-  color: #e74c3c;
-  padding: 8px 20px;
-  background: rgba(231, 76, 60, 0.1);
   margin: 0;
+  padding: 10px 20px;
+  color: #fecdd3;
+  font-size: 13px;
+  background: rgba(244, 63, 94, 0.1);
+  border-bottom: 1px solid rgba(244, 63, 94, 0.16);
 }
 
-/* Body */
 .atp-body {
-  overflow-y: auto;
   flex: 1;
+  overflow-y: auto;
   padding: 8px 0;
 }
 
-.atp-body::-webkit-scrollbar { width: 4px; }
-.atp-body::-webkit-scrollbar-thumb {
-  background: #333;
-  border-radius: 4px;
+.atp-body::-webkit-scrollbar {
+  width: 4px;
 }
 
-/* Loading */
+.atp-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+
 .atp-loading {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
   padding: 40px;
-  color: #888;
+  color: #94a3b8;
   font-size: 14px;
 }
 
-/* Empty */
 .atp-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
   padding: 40px 20px;
-  color: #888;
+  color: #94a3b8;
   text-align: center;
 }
 
 .atp-empty svg {
   font-size: 36px;
-  opacity: 0.3;
+  opacity: 0.35;
 }
 
 .atp-empty p {
-  font-size: 15px;
-  color: #ccc;
   margin: 0;
+  color: #e2e8f0;
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .atp-empty span {
+  color: #64748b;
   font-size: 13px;
-  color: #666;
 }
 
-/* List */
 .atp-list {
   list-style: none;
-  padding: 0;
   margin: 0;
+  padding: 0;
 }
 
 .atp-item {
@@ -136,28 +143,26 @@
   gap: 12px;
   padding: 10px 20px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.18s ease;
 }
 
 .atp-item:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .atp-item.is-added {
-  opacity: 0.7;
+  opacity: 0.72;
   cursor: default;
 }
 
-/* Ảnh bìa */
 .atp-cover {
   width: 46px;
   height: 46px;
-  border-radius: 6px;
+  border-radius: 10px;
   object-fit: cover;
   flex-shrink: 0;
 }
 
-/* Thông tin */
 .atp-info {
   flex: 1;
   min-width: 0;
@@ -165,63 +170,63 @@
 
 .atp-name {
   display: block;
+  margin-bottom: 4px;
+  color: #f8fafc;
   font-size: 14px;
-  font-weight: 600;
-  color: #fff;
+  font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 4px;
 }
 
 .atp-meta {
   display: flex;
   align-items: center;
   gap: 4px;
+  color: #94a3b8;
   font-size: 12px;
-  color: #888;
 }
 
-/* Nút thêm */
 .atp-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  width: 34px;
+  height: 34px;
   border: none;
+  border-radius: 50%;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
   font-size: 14px;
-  flex-shrink: 0;
-  transition: all 0.2s;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .atp-btn:hover:not(:disabled) {
-  background: #1db954;
-  transform: scale(1.1);
+  transform: scale(1.06);
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
 }
 
 .atp-btn.added {
-  background: #1db954;
-  color: #fff;
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  color: #ffffff;
   cursor: default;
 }
 
-.atp-btn:disabled {
+.atp-btn:disabled,
+.atp-close:disabled {
+  opacity: 0.65;
   cursor: not-allowed;
 }
 
-/* Spinner */
 .atp-spinner {
   width: 24px;
   height: 24px;
-  border: 3px solid #333;
-  border-top-color: #1db954;
+  border: 3px solid rgba(255, 255, 255, 0.14);
+  border-top-color: #67e8f9;
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  animation: atpSpin 0.8s linear infinite;
 }
 
 .atp-spinner.small {
@@ -230,6 +235,8 @@
   border-width: 2px;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+@keyframes atpSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }

@@ -1,37 +1,128 @@
 /* src/components/SongList.css */
+
 .song-list {
   padding: 20px;
+  border-radius: 24px;
+  background: rgba(12, 18, 35, 0.395);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .song-list-title {
-  color: #fff;
-  font-size: 1.8rem;
-  margin-bottom: 25px;
+  margin: 0 0 22px;
+  color: #f8fafc;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .song-list-header {
   display: flex;
   align-items: center;
-  padding: 0 20px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 10px;
   gap: 15px;
-  color: #888;
-  font-size: 0.75rem;
-  letter-spacing: 1px;
+  padding: 0 18px 12px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #7f8fb0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
-.col-index    { width: 30px;  text-align: center; flex-shrink: 0; }
-.col-cover    { width: 50px;  flex-shrink: 0; }
-.col-title    { flex: 1;      min-width: 0; }
-.col-duration { width: 55px;  text-align: center; flex-shrink: 0; }
-.col-album    { width: 150px; flex-shrink: 0; }
-.col-plays    { width: 110px; flex-shrink: 0; }
-.col-actions  { width: 30px;  flex-shrink: 0; }
+.col-index {
+  width: 30px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.col-cover {
+  width: 50px;
+  flex-shrink: 0;
+}
+
+.col-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.col-duration {
+  width: 55px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.col-album {
+  width: 150px;
+  flex-shrink: 0;
+}
+
+.col-plays {
+  width: 120px;
+  flex-shrink: 0;
+}
+
+.col-actions {
+  width: 72px;
+  flex-shrink: 0;
+}
+
+.song-list-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 
 .no-songs {
+  padding: 56px 20px;
   text-align: center;
-  padding: 60px 20px;
-  color: #888;
-  font-size: 1.1rem;
+  color: #8fa0bd;
+  font-size: 15px;
+}
+
+.no-songs p {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .song-list {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .song-list-title {
+    font-size: 24px;
+    margin-bottom: 18px;
+  }
+
+  .col-album,
+  .col-plays {
+    display: none;
+  }
+
+  .col-actions {
+    width: 64px;
+  }
+}
+
+@media (max-width: 640px) {
+  .song-list {
+    padding: 14px;
+  }
+
+  .song-list-header {
+    padding: 0 10px 10px;
+    gap: 12px;
+    font-size: 10px;
+  }
+
+  .col-duration {
+    width: 44px;
+  }
+
+  .col-actions {
+    width: 60px;
+  }
 }

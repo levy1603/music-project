@@ -1,85 +1,127 @@
-// src/components/playlist/PlaylistCard.js
-import React, { useState, useEffect, useRef } from "react";
-import { FaPlay, FaEllipsisV, FaEdit, FaTrash, FaLock, FaGlobe, FaMusic } from "react-icons/fa";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import {
+  FaPlay,
+  FaEllipsisV,
+  FaEdit,
+  FaTrash,
+  FaLock,
+  FaGlobe,
+  FaMusic,
+} from "react-icons/fa";
 import { useMusicContext } from "../../context/MusicContext";
 import "./PlaylistCard.css";
 
+const DEFAULT_PLAYLIST_COVER = "/images/default-playlist.jpg";
+
 const PlaylistCard = ({ playlist, onClick, onEdit, onDelete }) => {
   const [showMenu, setShowMenu] = useState(false);
-  const { getCoverURL } = useMusicContext();
-  const menuRef = useRef(null); // ✅ Ref để detect click outside
+  const menuRef = useRef(null);
+  const { getCoverURL, playSong } = useMusicContext();
 
-  // ✅ Click outside → đóng menu
+  const songs = useMemo(() => playlist?.songs || [], [playlist?.songs]);
+  const hasSongs = songs.length > 0;
+
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
+    if (!showMenu) return;
+
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
         setShowMenu(false);
       }
     };
-    if (showMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, [showMenu]);
 
-  const handleMenuClick = (e, action) => {
+  const firstSong = useMemo(() => songs[0] || null, [songs]);
+
+  const cardCover = useMemo(() => {
+    return firstSong ? getCoverURL(firstSong) : DEFAULT_PLAYLIST_COVER;
+  }, [firstSong, getCoverURL]);
+
+  const handleToggleMenu = useCallback((e) => {
+    e.stopPropagation();
+    setShowMenu((prev) => !prev);
+  }, []);
+
+  const handleMenuAction = useCallback((e, action) => {
     e.stopPropagation();
     setShowMenu(false);
     action();
-  };
+  }, []);
 
-  const getCardCover = () => {
-    const firstSong = playlist.songs?.[0];
-    if (firstSong) return getCoverURL(firstSong);
-    return "/images/default-playlist.jpg";
-  };
+  const handlePlayPlaylist = useCallback(
+    (e) => {
+      e.stopPropagation();
+      if (!hasSongs) return;
+      playSong(songs[0], "playlist", songs);
+    },
+    [hasSongs, songs, playSong]
+  );
 
   return (
     <div className="playlist-card" onClick={onClick}>
-
-      {/* ===== Ảnh bìa ===== */}
       <div className="card-cover">
-        <img src={getCardCover()} alt={playlist.name} />
+        <img
+          src={cardCover}
+          alt={playlist.name}
+          onError={(e) => {
+            e.currentTarget.src = DEFAULT_PLAYLIST_COVER;
+          }}
+        />
+
         <div className="card-overlay">
-          <button className="btn-play-card">
+          <button
+            type="button"
+            className="btn-play-card"
+            onClick={handlePlayPlaylist}
+            disabled={!hasSongs}
+            title={hasSongs ? "Phát playlist" : "Playlist trống"}
+            aria-label={hasSongs ? "Phát playlist" : "Playlist trống"}
+          >
             <FaPlay />
           </button>
         </div>
-        {!playlist.songs?.length && (
+
+        {!hasSongs && (
           <div className="card-empty-cover">
             <FaMusic />
           </div>
         )}
       </div>
 
-      {/* ===== Thông tin ===== */}
       <div className="card-info">
         <div className="card-info-top">
           <div>
             <h4 className="card-name">{playlist.name}</h4>
-            <p className="card-songs">{playlist.songs?.length || 0} bài hát</p>
+            <p className="card-songs">{songs.length} bài hát</p>
           </div>
 
-          {/* ✅ Menu 3 chấm */}
           <div className="card-menu-wrapper" ref={menuRef}>
             <button
+              type="button"
               className="btn-menu"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowMenu(!showMenu);
-              }}
+              onClick={handleToggleMenu}
+              aria-label="Mở menu playlist"
+              title="Tùy chọn"
             >
               <FaEllipsisV />
             </button>
 
             {showMenu && (
               <div className="card-dropdown">
-                <button onClick={(e) => handleMenuClick(e, onEdit)}>
+                <button type="button" onClick={(e) => handleMenuAction(e, onEdit)}>
                   <FaEdit /> Chỉnh sửa
                 </button>
+
                 <button
+                  type="button"
                   className="danger"
-                  onClick={(e) => handleMenuClick(e, onDelete)}
+                  onClick={(e) => handleMenuAction(e, onDelete)}
                 >
                   <FaTrash /> Xóa
                 </button>
@@ -89,10 +131,15 @@ const PlaylistCard = ({ playlist, onClick, onEdit, onDelete }) => {
         </div>
 
         <span className={`card-badge ${playlist.isPublic ? "public" : "private"}`}>
-          {playlist.isPublic
-            ? <><FaGlobe /> Công khai</>
-            : <><FaLock /> Riêng tư</>
-          }
+          {playlist.isPublic ? (
+            <>
+              <FaGlobe /> Công khai
+            </>
+          ) : (
+            <>
+              <FaLock /> Riêng tư
+            </>
+          )}
         </span>
       </div>
     </div>

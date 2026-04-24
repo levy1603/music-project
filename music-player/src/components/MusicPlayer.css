@@ -1,6 +1,5 @@
 /* src/components/MusicPlayer.css */
 
-/* ===== WRAPPER ===== */
 .player-wrapper {
   position: fixed;
   bottom: 20px;
@@ -11,354 +10,383 @@
   display: flex;
   align-items: flex-end;
   gap: 12px;
+  pointer-events: none;
 }
 
-/* ===== COMPACT PLAYER ===== */
+.player-wrapper > * {
+  pointer-events: auto;
+}
+
+/* ===== PLAYER SHELL ===== */
 .player-compact {
-  background: rgba(20, 20, 40, 0.92);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 20px;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  min-width: 420px;
+  width: 100%;
   max-width: 420px;
+  min-width: 420px;
+  border-radius: 22px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(99, 102, 241, 0.12), transparent 28%),
+    linear-gradient(180deg, rgba(13, 18, 35, 0.95), rgba(10, 14, 28, 0.97));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.32),
+    0 0 0 1px rgba(255, 255, 255, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
-/* Khi empty */
 .player-compact.empty {
-  padding: 15px 30px;
-  color: #888;
-  font-size: 0.9rem;
+  width: auto;
   min-width: auto;
   max-width: none;
+  padding: 14px 24px;
+  color: #b9c3da;
+  font-size: 13px;
+  text-align: center;
 }
 
-/* ===== PHẦN MỞ RỘNG ===== */
+/* ===== EXPANDED AREA ===== */
 .player-expanded-area {
   max-height: 0;
   overflow: hidden;
   opacity: 0;
-  border-bottom: 0px solid rgba(255, 255, 255, 0);
+  border-bottom: 1px solid transparent;
   transition:
-    max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity    0.35s ease,
-    border     0.35s ease;
+    max-height 0.36s ease,
+    opacity 0.28s ease,
+    border-color 0.28s ease;
 }
 
 .player-expanded-area.is-expanded {
-  max-height: 600px;
+  max-height: 420px;
   opacity: 1;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
 }
 
-/* Inner padding */
 .player-expanded-area-inner {
-  padding: 25px 30px 15px;
+  padding: 20px 18px 14px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 15px;
-  transform: translateY(0);
-  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: 14px;
 }
 
-.player-expanded-area:not(.is-expanded) .player-expanded-area-inner {
-  transform: translateY(10px);
-}
-
-/* ===== ẢNH BÌA LỚN ===== */
+/* ===== LARGE COVER ===== */
 .player-cover-large {
   position: relative;
   width: 120px;
   height: 120px;
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  box-shadow:
+    0 14px 28px rgba(0, 0, 0, 0.32),
+    0 0 0 6px rgba(99, 102, 241, 0.05);
 }
 
 .player-cover-large img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
-/* ===== THÔNG TIN MỞ RỘNG ===== */
+/* ===== OVERLAY ===== */
+.cover-detail-overlay,
+.cover-detail-overlay-small {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 9, 20, 0.54);
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+
+.player-cover-large:hover .cover-detail-overlay,
+.player-cover-small:hover .cover-detail-overlay-small {
+  opacity: 1;
+}
+
+.cover-detail-overlay span {
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cover-detail-overlay-small {
+  border-radius: inherit;
+}
+
+.cover-detail-overlay-small span {
+  color: #fff;
+  font-size: 13px;
+}
+
+/* ===== EXPANDED INFO ===== */
 .player-expanded-info {
   text-align: center;
 }
 
 .player-expanded-info h3 {
-  color: #fff;
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 0 0 4px 0;
+  margin: 0 0 4px;
+  color: #f8fafc;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .player-expanded-info p {
-  color: #888;
-  font-size: 0.82rem;
   margin: 0;
+  color: #9db0d1;
+  font-size: 12px;
 }
 
 .player-expanded-info.clickable:hover h3 {
-  color: #1db954;
+  color: #dbeafe;
 }
 
-/* ===== PROGRESS LỚN ===== */
+/* ===== LARGE PROGRESS ===== */
 .player-progress-large {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   width: 100%;
-  color: #888;
-  font-size: 0.75rem;
+  display: grid;
+  grid-template-columns: 36px 1fr 36px;
+  align-items: center;
+  gap: 8px;
+  color: #9fb0d2;
+  font-size: 11px;
 }
 
-.progress-bar-large {
-  flex: 1;
-  height: 5px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
-  cursor: pointer;
-  position: relative;
-  transition: height 0.2s;
-}
-
-.progress-bar-large:hover {
-  height: 7px;
-}
-
-.progress-fill-large {
-  height: 100%;
-  background: #1db954;
-  border-radius: 3px;
-  position: relative;
-  transition: width 0.1s linear;
-}
-
-.progress-thumb-large {
-  position: absolute;
-  right: -6px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 12px;
-  height: 12px;
-  background: #fff;
-  border-radius: 50%;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.progress-bar-large:hover .progress-thumb-large {
-  opacity: 1;
-}
-
-/* ===== CONTROLS LỚN ===== */
+/* ===== CONTROLS LARGE ===== */
 .player-controls-large {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 14px;
+}
+
+.ctrl-btn,
+.ctrl-btn-sm,
+.expand-btn,
+.fav-btn-player,
+.queue-icon-btn,
+.timer-icon-btn,
+.queue-refresh-btn,
+.queue-fav-btn {
+  border: none;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .ctrl-btn {
-  background: none;
-  border: none;
-  color: #aaa;
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 5px;
-  transition: all 0.3s;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #d9e3f8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
+  font-size: 13px;
 }
 
-.ctrl-btn:hover  { color: #fff; transform: scale(1.1); }
-.ctrl-btn.active { color: #1db954; }
+.ctrl-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.ctrl-btn.active {
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.24),
+    rgba(6, 182, 212, 0.18)
+  );
+  color: #ecfeff;
+}
 
 .play-btn-large {
   width: 44px;
   height: 44px;
-  background: #fff;
-  color: #000 !important;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  color: #fff !important;
+  box-shadow: 0 10px 22px rgba(6, 182, 212, 0.2);
+  font-size: 14px;
 }
 
 .play-btn-large:hover {
-  background: #1db954;
-  color: #fff !important;
-  transform: scale(1.1);
+  transform: translateY(-1px) scale(1.03);
 }
 
-/* ===== HÀNG DƯỚI EXPANDED: Queue + Timer ===== */
+.repeat-one {
+  position: absolute;
+  right: 7px;
+  bottom: 5px;
+  font-size: 9px;
+  font-weight: 800;
+  color: #ecfeff;
+}
+
+/* ===== EXPANDED BOTTOM ===== */
 .player-expanded-bottom {
-  display:         flex;
-  align-items:     center;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  gap:             16px;
-  margin-top:      4px;
-  width:           100%;
+  gap: 12px;
+  width: 100%;
 }
 
-/* Style chung cho cả 2 nút icon */
 .queue-icon-btn,
 .timer-icon-btn {
-  display:         flex;
-  align-items:     center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  color: #dbeafe;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  width:           36px;
-  height:          36px;
-  border-radius:   50%;
-  border:          1px solid rgba(255, 255, 255, 0.1);
-  background:      rgba(255, 255, 255, 0.06);
-  color:           #888;
-  font-size:       0.88rem;
-  cursor:          pointer;
-  transition:      all 0.2s ease;
-  position:        relative;
-  flex-shrink:     0;
+  position: relative;
+  font-size: 13px;
 }
 
 .queue-icon-btn:hover,
 .timer-icon-btn:hover {
-  background:   rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.2);
-  color:        #fff;
-  transform:    scale(1.08);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
-/* Queue active */
-.queue-icon-btn.active {
-  background:   rgba(29, 185, 84, 0.2);
-  border-color: rgba(29, 185, 84, 0.4);
-  color:        #1db954;
-}
-
-/* Timer active */
+.queue-icon-btn.active,
+.timer-icon-btn.timer-open,
 .timer-icon-btn.timer-active {
-  background:   rgba(29, 185, 84, 0.2);
-  border-color: rgba(29, 185, 84, 0.4);
-  color:        #1db954;
-  animation:    timer-pulse 2s ease-in-out infinite;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.24),
+    rgba(6, 182, 212, 0.18)
+  );
+  color: #ecfeff;
 }
 
-/* Timer open */
-.timer-icon-btn.timer-open {
-  background:   rgba(29, 185, 84, 0.3);
-  border-color: #1db954;
-  color:        #1db954;
+.timer-icon-btn.timer-active {
+  animation: timerPulse 2.2s ease-in-out infinite;
 }
 
-/* Badge thời gian trên icon timer */
-.timer-icon-btn .timer-badge {
-  position:       absolute;
-  top:            -8px;
-  right:          -12px;
-  background:     #1db954;
-  color:          #fff;
-  font-size:      0.55rem;
-  font-weight:    700;
-  padding:        2px 5px;
-  border-radius:  8px;
-  white-space:    nowrap;
-  line-height:    1.3;
-  pointer-events: none;
-  border:         1px solid rgba(20, 20, 40, 0.8);
+.timer-badge {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 8px 18px rgba(6, 182, 212, 0.18);
 }
 
-/* ===== SLEEP TIMER INLINE ===== */
-.sleep-timer-inline {
-  width:      100%;
-  margin-top: 4px;
-  animation:  slideUpTimer 0.25s ease;
+@keyframes timerPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.18);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(6, 182, 212, 0.02);
+  }
 }
 
-@keyframes slideUpTimer {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0);   }
-}
-
-.sleep-timer-inline .sleep-timer-panel {
-  position:      relative;
-  bottom:        unset;
-  right:         unset;
-  width:         100%;
-  box-shadow:    none;
-  margin-top:    0;
-  border-radius: 14px;
-  background:    rgba(255, 255, 255, 0.03);
-  border:        1px solid rgba(255, 255, 255, 0.07);
-}
-
-/* ===== THANH BAR CHÍNH ===== */
+/* ===== MAIN BAR ===== */
 .player-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) 42px;
   align-items: center;
+  gap: 10px;
   padding: 10px 14px;
-  gap: 0;
 }
 
-/* ===== THÔNG TIN BÀI HÁT - BÊN TRÁI ===== */
+/* ===== LEFT ===== */
 .player-song-info {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 130px;
-  flex-shrink: 0;
 }
 
 .player-cover-small {
   position: relative;
   width: 40px;
   height: 40px;
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
   flex-shrink: 0;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
 }
 
 .player-cover-small img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
-/* Animation nhạc đang phát */
 .cover-playing-indicator {
   position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  left: 50%;
+  bottom: 4px;
+  transform: translateX(-50%);
   display: flex;
   align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 4px;
   gap: 2px;
+  padding: 3px 5px;
+  border-radius: 999px;
+  background: rgba(5, 10, 22, 0.5);
 }
 
-.cover-playing-indicator span {
+.cover-playing-indicator span,
+.queue-playing-bars span {
   width: 3px;
-  background: #1db954;
-  border-radius: 2px;
-  animation: barBounce 0.6s ease-in-out infinite alternate;
+  border-radius: 999px;
+  background: #67e8f9;
+  animation: soundBars 0.9s ease-in-out infinite;
 }
 
-.cover-playing-indicator span:nth-child(1) { height: 6px;  animation-delay: 0s;   }
-.cover-playing-indicator span:nth-child(2) { height: 10px; animation-delay: 0.2s; }
-.cover-playing-indicator span:nth-child(3) { height: 7px;  animation-delay: 0.4s; }
+.cover-playing-indicator span:nth-child(1),
+.queue-playing-bars span:nth-child(1) {
+  height: 6px;
+  animation-delay: 0s;
+}
 
-@keyframes barBounce {
-  from { height: 4px;  }
-  to   { height: 12px; }
+.cover-playing-indicator span:nth-child(2),
+.queue-playing-bars span:nth-child(2) {
+  height: 10px;
+  animation-delay: 0.15s;
+}
+
+.cover-playing-indicator span:nth-child(3),
+.queue-playing-bars span:nth-child(3) {
+  height: 7px;
+  animation-delay: 0.3s;
+}
+
+@keyframes soundBars {
+  0%, 100% {
+    transform: scaleY(0.72);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scaleY(1.2);
+    opacity: 1;
+  }
 }
 
 .player-song-text {
-  flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -366,482 +394,510 @@
 }
 
 .player-song-name {
-  color: #fff;
-  font-size: 0.78rem;
-  font-weight: 600;
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .player-song-artist {
-  color: #888;
-  font-size: 0.68rem;
+  color: #94a3b8;
+  font-size: 11px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.player-song-text.clickable:hover .player-song-name   { color: #1db954; text-decoration: underline; }
-.player-song-text.clickable:hover .player-song-artist { color: #aaa; }
-
-.fav-btn-player {
-  background: none;
-  border: none;
-  color: #888;
-  cursor: pointer;
-  font-size: 0.82rem;
-  padding: 4px;
-  transition: all 0.3s;
-  flex-shrink: 0;
+.player-song-text.clickable:hover .player-song-name {
+  color: #dbeafe;
 }
 
-.fav-btn-player:hover { color: #fff; transform: scale(1.2); }
-.fav-btn-player.liked { color: #1db954; }
+.player-song-text.clickable:hover .player-song-artist {
+  color: #cbd5e1;
+}
 
-/* ===== CENTER - CONTROLS + PROGRESS ===== */
+.fav-btn-player {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.fav-btn-player:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.fav-btn-player.liked {
+  color: #f9a8d4;
+}
+
+/* ===== CENTER ===== */
 .player-center {
-  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 6px;
-  min-width: 0;
-  padding: 0 8px;
 }
 
 .player-buttons {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  gap: 8px;
 }
 
-/* ===== BUTTONS NHỎ ===== */
 .ctrl-btn-sm {
-  background: none;
-  border: none;
-  color: #aaa;
-  cursor: pointer;
-  font-size: 0.82rem;
-  padding: 4px;
-  transition: all 0.3s;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #dbeafe;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
+  font-size: 12px;
 }
 
-.ctrl-btn-sm:hover  { color: #fff; transform: scale(1.1); }
-.ctrl-btn-sm.active { color: #1db954; }
+.ctrl-btn-sm:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.ctrl-btn-sm.active {
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.24),
+    rgba(6, 182, 212, 0.18)
+  );
+  color: #ecfeff;
+}
 
 .ctrl-btn-sm.play-btn {
   width: 34px;
   height: 34px;
-  background: #fff;
-  color: #000;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.82rem;
-  transition: all 0.3s;
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(6, 182, 212, 0.18);
+  font-size: 13px;
 }
 
 .ctrl-btn-sm.play-btn:hover {
-  background: #1db954;
-  color: #fff;
-  transform: scale(1.1);
+  transform: translateY(-1px) scale(1.03);
 }
 
-.repeat-one {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  font-size: 0.5rem;
-  font-weight: bold;
-  color: #1db954;
-}
-
-/* ===== PROGRESS BAR NHỎ ===== */
 .player-progress {
-  display: flex;
+  display: grid;
+  grid-template-columns: 32px 1fr 32px;
   align-items: center;
   gap: 6px;
-  width: 100%;
 }
 
 .time {
-  color: #888;
-  font-size: 0.65rem;
-  min-width: 30px;
+  color: #9fb0d2;
+  font-size: 10px;
   text-align: center;
-  flex-shrink: 0;
+}
+
+/* ===== SHARED PROGRESS ===== */
+.progress-bar,
+.progress-bar-large {
+  position: relative;
+  overflow: visible;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
 }
 
 .progress-bar {
-  flex: 1;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 2px;
-  cursor: pointer;
-  position: relative;
-  transition: height 0.2s;
+  height: 4px;
+  border-radius: 999px;
 }
 
-.progress-bar:hover { height: 5px; }
+.progress-bar-large {
+  height: 5px;
+  border-radius: 999px;
+}
 
-.progress-fill {
-  height: 100%;
-  background: #1db954;
-  border-radius: 2px;
+.progress-bar:hover,
+.progress-bar-large:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.progress-fill,
+.progress-fill-large {
   position: relative;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #6366f1, #06b6d4);
   transition: width 0.1s linear;
 }
 
-.progress-thumb {
+.progress-thumb,
+.progress-thumb-large {
   position: absolute;
   right: -5px;
   top: 50%;
   transform: translateY(-50%);
-  width: 9px;
-  height: 9px;
-  background: #fff;
   border-radius: 50%;
+  background: #fff;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s ease;
+  box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.12);
 }
 
-.progress-bar:hover .progress-thumb { opacity: 1; }
+.progress-thumb {
+  width: 9px;
+  height: 9px;
+}
+
+.progress-thumb-large {
+  width: 10px;
+  height: 10px;
+}
+
+.progress-bar:hover .progress-thumb,
+.progress-bar-large:hover .progress-thumb-large {
+  opacity: 1;
+}
 
 /* ===== RIGHT ===== */
 .player-right {
-  display:         flex;
-  align-items:     center;
-  justify-content: flex-end;
-  gap:             6px;
-  flex-shrink:     0;
-  min-width:       36px;
-}
-
-/* ✅ Ẩn volume */
-.volume-control { display: none; }
-.volume-slider  { display: none; }
-
-/* ===== NÚT EXPAND ===== */
-.expand-btn {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #aaa;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.timer-compact-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.14);
+  border: 1px solid rgba(129, 140, 248, 0.16);
+  color: #dbeafe;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.timer-compact-badge:hover {
+  background: rgba(99, 102, 241, 0.2);
+  transform: translateY(-1px);
+}
+
+.expand-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  color: #dbeafe;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  font-size: 0.65rem;
-  transition: all 0.3s;
+  font-size: 11px;
 }
 
 .expand-btn:hover {
-  background:   rgba(29, 185, 84, 0.2);
-  border-color: #1db954;
-  color:        #1db954;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
 .expand-btn svg {
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.25s ease;
 }
 
 .expand-btn.is-expanded svg {
   transform: rotate(180deg);
 }
 
-/* ===== BADGE COMPACT KHI CHƯA EXPAND ===== */
-.timer-compact-badge {
-  display:       flex;
-  align-items:   center;
-  gap:           4px;
-  padding:       3px 8px;
-  background:    rgba(29, 185, 84, 0.2);
-  border:        1px solid rgba(29, 185, 84, 0.35);
-  color:         #1db954;
-  border-radius: 12px;
-  font-size:     0.68rem;
-  font-weight:   700;
-  cursor:        pointer;
-  animation:     timer-pulse 2s ease-in-out infinite;
-  transition:    all 0.2s;
-  white-space:   nowrap;
-}
-
-.timer-compact-badge:hover {
-  background: rgba(29, 185, 84, 0.3);
-  transform:  scale(1.05);
-}
-
-/* ===== CLICKABLE ===== */
-.clickable { cursor: pointer; }
-
-/* ===== OVERLAY NHỎ ===== */
-.cover-detail-overlay-small {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  border-radius: inherit;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.2s;
-  font-size: 0.9rem;
-}
-
-.player-cover-small:hover .cover-detail-overlay-small { opacity: 1; }
-
-/* ===== OVERLAY LỚN ===== */
-.cover-detail-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: inherit;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.3s;
-  color: #fff;
-  font-size: 0.9rem;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-.player-cover-large:hover .cover-detail-overlay { opacity: 1; }
-
-/* ===== QUEUE PANEL ===== */
-.queue-panel {
-  width: 280px;
+/* ===== PANELS ===== */
+.queue-panel,
+.timer-panel {
+  width: 300px;
   max-height: 420px;
-  background: rgba(20, 20, 40, 0.95);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  display: flex;
-  flex-direction: column;
   overflow: hidden;
-  animation: queueSlideIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(13, 18, 35, 0.97), rgba(9, 14, 28, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.32),
+    0 0 0 1px rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: panelSlideUp 0.18s ease;
 }
 
-@keyframes queueSlideIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0);    }
+@keyframes panelSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* ===== QUEUE HEADER ===== */
+/* ===== QUEUE ===== */
 .queue-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  flex-shrink: 0;
+  gap: 12px;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .queue-header h4 {
-  color: #fff;
-  font-size: 0.85rem;
   margin: 0;
-  font-weight: 600;
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .queue-refresh-btn {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 50%;
-  color: #888;
-  width: 26px;
-  height: 26px;
-  display: flex;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #dbeafe;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  font-size: 0.72rem;
-  transition: all 0.3s;
+  font-size: 11px;
 }
 
 .queue-refresh-btn:hover {
-  background:   rgba(29, 185, 84, 0.2);
-  border-color: #1db954;
-  color:        #1db954;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
-/* ===== QUEUE LIST ===== */
 .queue-list {
-  flex: 1;
+  max-height: 360px;
   overflow-y: auto;
-  padding: 8px 0;
+  padding: 6px 8px 10px;
 }
 
-.queue-list::-webkit-scrollbar       { width: 4px; }
-.queue-list::-webkit-scrollbar-track { background: transparent; }
+.queue-list::-webkit-scrollbar {
+  width: 6px;
+}
+
 .queue-list::-webkit-scrollbar-thumb {
-  background:    rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
-}
-.queue-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
 }
 
-/* ===== QUEUE ITEM ===== */
 .queue-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 24px 40px minmax(0, 1fr) 32px;
   align-items: center;
   gap: 10px;
-  padding: 7px 14px;
+  padding: 8px;
+  border-radius: 14px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.18s ease;
 }
 
-.queue-item:hover  { background: rgba(255, 255, 255, 0.06); }
-.queue-item.active { background: rgba(29, 185, 84, 0.08);   }
+.queue-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
 
-/* Index */
+.queue-item.active {
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.14),
+    rgba(6, 182, 212, 0.1)
+  );
+  border: 1px solid rgba(103, 232, 249, 0.1);
+}
+
 .queue-index {
-  width: 18px;
+  font-size: 11px;
+  color: #8fa0bd;
   text-align: center;
-  color: #555;
-  font-size: 0.7rem;
-  flex-shrink: 0;
 }
 
-/* Playing bars */
 .queue-playing-bars {
   display: flex;
   align-items: flex-end;
+  justify-content: center;
   gap: 2px;
-  height: 12px;
+  height: 16px;
 }
 
-.queue-playing-bars span {
-  width: 3px;
-  background: #1db954;
-  border-radius: 2px;
-  animation: barBounce 0.6s ease-in-out infinite alternate;
-}
-
-.queue-playing-bars span:nth-child(1) { animation-delay: 0s;   }
-.queue-playing-bars span:nth-child(2) { animation-delay: 0.2s; }
-.queue-playing-bars span:nth-child(3) { animation-delay: 0.4s; }
-
-/* Cover */
 .queue-cover {
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   object-fit: cover;
-  flex-shrink: 0;
 }
 
-/* Info */
 .queue-info {
-  flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .queue-title {
-  color: #ddd;
-  font-size: 0.78rem;
-  font-weight: 500;
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-.queue-item.active .queue-title { color: #1db954; }
 
 .queue-artist {
-  color: #555;
-  font-size: 0.68rem;
+  color: #94a3b8;
+  font-size: 11px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Fav */
 .queue-fav-btn {
-  background: none;
-  border: none;
-  color: #444;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #cbd5e1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.queue-fav-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.queue-fav-btn.liked {
+  color: #f9a8d4;
+}
+
+.queue-empty-state {
+  padding: 20px 14px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* ===== TIMER PANEL INNER RESET ===== */
+.timer-panel .sleep-timer-panel {
+  all: unset;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px;
+}
+
+/* ===== GENERIC ===== */
+.clickable {
   cursor: pointer;
-  font-size: 0.75rem;
-  padding: 4px;
-  flex-shrink: 0;
-  transition: all 0.2s;
 }
 
-.queue-fav-btn:hover { color: #fff; transform: scale(1.2); }
-.queue-fav-btn.liked { color: #1db954; }
-
-/* ===== ANIMATIONS ===== */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-@keyframes timer-pulse {
-  0%, 100% { opacity: 1;   }
-  50%       { opacity: 0.6; }
+.clickable:focus-visible,
+.ctrl-btn:focus-visible,
+.ctrl-btn-sm:focus-visible,
+.expand-btn:focus-visible,
+.fav-btn-player:focus-visible,
+.queue-icon-btn:focus-visible,
+.timer-icon-btn:focus-visible,
+.queue-refresh-btn:focus-visible,
+.queue-fav-btn:focus-visible {
+  outline: 2px solid rgba(103, 232, 249, 0.58);
+  outline-offset: 2px;
 }
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
   .player-wrapper {
-    left:      10px;
-    right:     10px;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
     max-width: calc(100vw - 20px);
   }
 
   .player-compact {
     min-width: 100%;
     max-width: 100%;
-    border-radius: 16px;
+    border-radius: 18px;
   }
 
-  .player-song-info { width: 120px; }
-  .player-bar       { padding: 10px 12px; }
-  .queue-panel      { display: none; }
+  .player-bar {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .player-song-info,
+  .player-right {
+    justify-content: space-between;
+  }
+
+  .player-right {
+    order: 2;
+  }
+
+  .player-center {
+    order: 3;
+  }
+
+  .queue-panel,
+  .timer-panel {
+    display: none;
+  }
 }
 
 @media (max-width: 480px) {
-  .player-wrapper    { bottom: 10px; }
-  .player-song-info  { width: 100px; }
-  .player-buttons    { gap: 8px; }
-  .ctrl-btn-sm       { font-size: 0.78rem; }
-  .ctrl-btn-sm.play-btn { width: 30px; height: 30px; }
-}
+  .player-song-info {
+    gap: 8px;
+  }
 
-/* ===== TIMER PANEL - bên phải player, giống queue panel ===== */
-/* ===== TIMER PANEL ===== */
-.timer-panel {
-  width:           300px;
-  background:      rgba(20, 20, 40, 0.55); /* ✅ Trong suốt vừa */
-  backdrop-filter: blur(28px) saturate(180%);
-  border:          1px solid rgba(255, 255, 255, 0.15);
-  border-radius:   16px;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  overflow:  hidden;
-  animation: queueSlideIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
+  .player-song-name {
+    font-size: 11px;
+  }
 
-/* ✅ Reset hoàn toàn SleepTimerPanel bên trong */
-.timer-panel .sleep-timer-panel {
-  all:           unset !important; /* Reset tất cả style */
-  display:       block !important;
-  width:         100% !important;
-  padding:       16px !important;
-  box-sizing:    border-box !important;
+  .player-song-artist {
+    font-size: 10px;
+  }
+
+  .ctrl-btn-sm {
+    min-width: 26px;
+    height: 26px;
+    font-size: 11px;
+  }
+
+  .ctrl-btn-sm.play-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+
+  .expand-btn {
+    width: 26px;
+    height: 26px;
+  }
+
+  .player-cover-large {
+    width: 104px;
+    height: 104px;
+  }
 }
-.sleep-timer-inline { display: none; }

@@ -1,0 +1,73 @@
+.favorites-loading,
+.favorites-error,
+.favorites-empty {
+  min-height: 320px;
+  padding: 24px;
+  border-radius: 24px;
+  background: rgba(12, 18, 35, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  color: #cbd5e1;
+}
+
+.favorites-spinner {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 4px solid rgba(255, 255, 255, 0.08);
+  border-top-color: #67e8f9;
+  animation: favoritesSpin 0.8s linear infinite;
+}
+
+@keyframes favoritesSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.favorites-loading p,
+.favorites-empty p,
+.favorites-error p {
+  margin: 0;
+  color: #94a3b8;
+}
+
+.favorites-empty h3 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.favorites-empty-icon {
+  font-size: 42px;
+  line-height: 1;
+}
+
+.favorites-error button {
+  min-height: 42px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 12px 24px rgba(6, 182, 212, 0.16);
+}
+
+.favorites-error button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px rgba(6, 182, 212, 0.22);
+}

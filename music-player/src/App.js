@@ -1,31 +1,48 @@
-import React                                 from "react";
+import React from "react";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
-}                                            from "react-router-dom";
-import { AuthProvider, useAuth }             from "./context/AuthContext";
-import { MusicProvider }                     from "./context/MusicContext";
-import { NotificationProvider }              from "./context/NotificationContext";
-import Header                                from "./components/header/index";
-import Sidebar                               from "./components/Sidebar";
-import MusicPlayer                           from "./components/MusicPlayer";
-import Home                                  from "./pages/Home";
-import Favorites                             from "./pages/Favorites";
-import Playlist                              from "./pages/Playlist";
-import MyPlaylists                           from "./pages/MyPlaylists";
-import Upload                                from "./pages/Upload";
-import Login                                 from "./pages/Login";
-import Register                              from "./pages/Register";
-import SongDetail                            from "./pages/SongDetail";
-import ProfilePage                           from "./pages/ProfilePage";
-import SearchResults                         from "./pages/SearchResults";
-import AdminPage                             from "./pages/admin/AdminPage";
-import NotificationsPage                     from "./pages/NotificationsPage";
-// ✅ THÊM DÒNG NÀY
-import usePageTitle                          from "./hooks/usePageTitle";
+} from "react-router-dom";
+
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { MusicProvider } from "./context/MusicContext";
+import { NotificationProvider } from "./context/NotificationContext";
+
+import Header from "./components/header/index";
+import Sidebar from "./components/Sidebar";
+import MusicPlayer from "./components/MusicPlayer";
+
+import Home from "./pages/Home";
+import Favorites from "./pages/Favorites";
+import Playlist from "./pages/Playlist";
+import MyPlaylists from "./pages/MyPlaylists";
+import Upload from "./pages/Upload";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import SongDetail from "./pages/SongDetail";
+import ProfilePage from "./pages/ProfilePage";
+import SearchResults from "./pages/SearchResults";
+import AdminPage from "./pages/admin/AdminPage";
+import NotificationsPage from "./pages/NotificationsPage";
+
+import usePageTitle from "./hooks/usePageTitle";
 import "./App.css";
+
+/* ═══════════════════════════════════════════
+   ROUTE LOADING
+═══════════════════════════════════════════ */
+const RouteLoading = ({ message = "Đang tải..." }) => {
+  return (
+    <div className="route-loading">
+      <div className="route-loading-card">
+        <div className="route-loading-spinner" />
+        <p>{message}</p>
+      </div>
+    </div>
+  );
+};
 
 /* ═══════════════════════════════════════════
    PRIVATE ROUTE
@@ -34,14 +51,10 @@ const PrivateRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div style={{ textAlign: "center", padding: "60px", color: "#888" }}>
-        🔄 Đang kiểm tra đăng nhập...
-      </div>
-    );
+    return <RouteLoading message="Đang kiểm tra đăng nhập..." />;
   }
 
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
 /* ═══════════════════════════════════════════
@@ -51,15 +64,11 @@ const AdminRoute = ({ children }) => {
   const { isAuthenticated, user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div style={{ textAlign: "center", padding: "60px", color: "#888" }}>
-        🔄 Đang kiểm tra...
-      </div>
-    );
+    return <RouteLoading message="Đang kiểm tra quyền truy cập..." />;
   }
 
-  if (!isAuthenticated)       return <Navigate to="/login" />;
-  if (user?.role !== "admin") return <Navigate to="/" />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user?.role !== "admin") return <Navigate to="/" replace />;
 
   return children;
 };
@@ -67,7 +76,7 @@ const AdminRoute = ({ children }) => {
 /* ═══════════════════════════════════════════
    MAIN LAYOUT
 ═══════════════════════════════════════════ */
-const MainLayout = ({ children }) => {
+const MainLayout = ({ children, showPlayer = true }) => {
   return (
     <>
       <Header />
@@ -75,83 +84,116 @@ const MainLayout = ({ children }) => {
         <Sidebar />
         <main className="main-content">{children}</main>
       </div>
-      <MusicPlayer />
+      {showPlayer && <MusicPlayer />}
     </>
   );
 };
 
 /* ═══════════════════════════════════════════
-   APP ROUTES
+   MUSIC APP ROUTES
 ═══════════════════════════════════════════ */
-function AppRoutes() {
-  // ✅ THÊM DÒNG NÀY - gọi hook ở đây vì nằm trong <Router>
-  usePageTitle();
-
+const MusicAppRoutes = () => {
   return (
     <MusicProvider>
       <Routes>
-
-        {/* ── PUBLIC ── */}
-        <Route path="/login"    element={<Login />} />
-        <Route path="/register" element={<Register />} />
-
-        {/* ── CÓ LAYOUT ── */}
-        <Route path="/"
-          element={<MainLayout><Home /></MainLayout>}
+        {/* ── PUBLIC WITH MAIN LAYOUT ── */}
+        <Route
+          path="/"
+          element={
+            <MainLayout>
+              <Home />
+            </MainLayout>
+          }
         />
-        <Route path="/song/:id"
-          element={<MainLayout><SongDetail /></MainLayout>}
+
+        <Route
+          path="/song/:id"
+          element={
+            <MainLayout>
+              <SongDetail />
+            </MainLayout>
+          }
         />
-        <Route path="/search"
-          element={<MainLayout><SearchResults /></MainLayout>}
+
+        <Route
+          path="/search"
+          element={
+            <MainLayout>
+              <SearchResults />
+            </MainLayout>
+          }
         />
 
         {/* ── PRIVATE ── */}
-        <Route path="/profile"
+        <Route
+          path="/profile"
           element={
             <PrivateRoute>
-              <MainLayout><ProfilePage /></MainLayout>
+              <MainLayout>
+                <ProfilePage />
+              </MainLayout>
             </PrivateRoute>
           }
         />
-        <Route path="/favorites"
+
+        <Route
+          path="/favorites"
           element={
             <PrivateRoute>
-              <MainLayout><Favorites /></MainLayout>
+              <MainLayout>
+                <Favorites />
+              </MainLayout>
             </PrivateRoute>
           }
         />
-        <Route path="/playlist"
+
+        <Route
+          path="/playlist"
           element={
             <PrivateRoute>
-              <MainLayout><Playlist /></MainLayout>
+              <MainLayout>
+                <Playlist />
+              </MainLayout>
             </PrivateRoute>
           }
         />
-        <Route path="/my-playlists"
+
+        <Route
+          path="/my-playlists"
           element={
             <PrivateRoute>
-              <MainLayout><MyPlaylists /></MainLayout>
+              <MainLayout>
+                <MyPlaylists />
+              </MainLayout>
             </PrivateRoute>
           }
         />
-        <Route path="/upload"
+
+        <Route
+          path="/upload"
           element={
             <PrivateRoute>
-              <MainLayout><Upload /></MainLayout>
+              <MainLayout>
+                <Upload />
+              </MainLayout>
             </PrivateRoute>
           }
         />
-        <Route path="/notifications"
+
+        <Route
+          path="/notifications"
           element={
             <PrivateRoute>
-              <MainLayout><NotificationsPage /></MainLayout>
+              <MainLayout>
+                <NotificationsPage />
+              </MainLayout>
             </PrivateRoute>
           }
         />
 
         {/* ── ADMIN ── */}
-        <Route path="/admin"
+        <Route
+          path="/admin"
           element={
             <AdminRoute>
               <AdminPage />
@@ -159,11 +201,28 @@ function AppRoutes() {
           }
         />
 
-        {/* ── 404 ── */}
-        <Route path="*" element={<Navigate to="/" />} />
-
+        {/* ── 404 INSIDE MUSIC APP ── */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </MusicProvider>
+  );
+};
+
+/* ═══════════════════════════════════════════
+   APP ROUTES
+═══════════════════════════════════════════ */
+function AppRoutes() {
+  usePageTitle();
+
+  return (
+    <Routes>
+      {/* Auth pages */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+
+      {/* Music app */}
+      <Route path="/*" element={<MusicAppRoutes />} />
+    </Routes>
   );
 }
 

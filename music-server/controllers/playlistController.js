@@ -1,13 +1,18 @@
-// controllers/playlistController.js
 const Playlist = require("../models/Playlist");
 
-// @desc    Lấy tất cả playlist của user
-// @route   GET /api/playlists
-// @access  Private
+const PLAYLIST_SONG_POPULATE = {
+  path: "songs",
+  select: "title artist coverImage duration audioFile",
+  match: {
+    status: "approved",
+    isDeleted: { $ne: true },
+  },
+};
+
 const getMyPlaylists = async (req, res, next) => {
   try {
     const playlists = await Playlist.find({ owner: req.user._id })
-      .populate("songs", "title artist coverImage duration audioFile") // ✅ Thêm audioFile
+      .populate(PLAYLIST_SONG_POPULATE)
       .sort({ updatedAt: -1 });
 
     res.status(200).json({
@@ -20,54 +25,48 @@ const getMyPlaylists = async (req, res, next) => {
   }
 };
 
-// @desc    Lấy playlist public
-// @route   GET /api/playlists/public
-// @access  Public
 const getPublicPlaylists = async (req, res, next) => {
   try {
     const playlists = await Playlist.find({ isPublic: true })
       .populate("owner", "username avatar")
-      .populate("songs", "title artist coverImage duration audioFile") // ✅ Thêm audioFile
+      .populate(PLAYLIST_SONG_POPULATE)
       .sort({ createdAt: -1 });
+
+    const visiblePlaylists = playlists.filter((playlist) => playlist.owner);
 
     res.status(200).json({
       success: true,
-      count: playlists.length,
-      data: playlists,
+      count: visiblePlaylists.length,
+      data: visiblePlaylists,
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Lấy 1 playlist theo ID
-// @route   GET /api/playlists/:id
-// @access  Public/Private
 const getPlaylist = async (req, res, next) => {
   try {
     const playlist = await Playlist.findById(req.params.id)
       .populate("owner", "username avatar")
       .populate({
-        path: "songs",
-        select: "title artist coverImage duration audioFile", // ✅ Thêm audioFile
+        ...PLAYLIST_SONG_POPULATE,
         populate: { path: "uploadedBy", select: "username" },
       });
 
-    if (!playlist) {
+    if (!playlist || !playlist.owner) {
       return res.status(404).json({
         success: false,
-        message: "Không tìm thấy playlist",
+        message: "Khong tim thay playlist",
       });
     }
 
-    // Kiểm tra quyền xem playlist private
     if (
       !playlist.isPublic &&
       (!req.user || playlist.owner._id.toString() !== req.user._id.toString())
     ) {
       return res.status(403).json({
         success: false,
-        message: "Playlist này ở chế độ riêng tư",
+        message: "Playlist nay o che do rieng tu",
       });
     }
 
@@ -80,9 +79,6 @@ const getPlaylist = async (req, res, next) => {
   }
 };
 
-// @desc    Tạo playlist mới
-// @route   POST /api/playlists
-// @access  Private
 const createPlaylist = async (req, res, next) => {
   try {
     const { name, description, isPublic } = req.body;
@@ -96,7 +92,7 @@ const createPlaylist = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      message: "Tạo playlist thành công",
+      message: "Tao playlist thanh cong",
       data: playlist,
     });
   } catch (error) {
@@ -104,9 +100,6 @@ const createPlaylist = async (req, res, next) => {
   }
 };
 
-// @desc    Cập nhật playlist
-// @route   PUT /api/playlists/:id
-// @access  Private (owner)
 const updatePlaylist = async (req, res, next) => {
   try {
     let playlist = await Playlist.findById(req.params.id);
@@ -114,14 +107,14 @@ const updatePlaylist = async (req, res, next) => {
     if (!playlist) {
       return res.status(404).json({
         success: false,
-        message: "Không tìm thấy playlist",
+        message: "Khong tim thay playlist",
       });
     }
 
     if (playlist.owner.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
-        message: "Bạn không có quyền chỉnh sửa playlist này",
+        message: "Ban khong co quyen chinh sua playlist nay",
       });
     }
 
@@ -132,7 +125,7 @@ const updatePlaylist = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: "Cập nhật playlist thành công",
+      message: "Cap nhat playlist thanh cong",
       data: playlist,
     });
   } catch (error) {
@@ -140,9 +133,6 @@ const updatePlaylist = async (req, res, next) => {
   }
 };
 
-// @desc    Xóa playlist
-// @route   DELETE /api/playlists/:id
-// @access  Private (owner)
 const deletePlaylist = async (req, res, next) => {
   try {
     const playlist = await Playlist.findById(req.params.id);
@@ -150,14 +140,17 @@ const deletePlaylist = async (req, res, next) => {
     if (!playlist) {
       return res.status(404).json({
         success: false,
-        message: "Không tìm thấy playlist",
+        message: "Khong tim thay playlist",
       });
     }
 
-    if (playlist.owner.toString() !== req.user._id.toString()) {
+    if (
+      playlist.owner.toString() !== req.user._id.toString() &&
+      req.user.role !== "admin"
+    ) {
       return res.status(403).json({
         success: false,
-        message: "Bạn không có quyền xóa playlist này",
+        message: "Ban khong co quyen xoa playlist nay",
       });
     }
 
@@ -165,16 +158,13 @@ const deletePlaylist = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: "Xóa playlist thành công",
+      message: "Xoa playlist thanh cong",
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Thêm bài hát vào playlist
-// @route   PUT /api/playlists/:id/add-song
-// @access  Private (owner)
 const addSongToPlaylist = async (req, res, next) => {
   try {
     const { songId } = req.body;
@@ -183,34 +173,34 @@ const addSongToPlaylist = async (req, res, next) => {
     if (!playlist) {
       return res.status(404).json({
         success: false,
-        message: "Không tìm thấy playlist",
+        message: "Khong tim thay playlist",
       });
     }
 
     if (playlist.owner.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
-        message: "Bạn không có quyền chỉnh sửa playlist này",
+        message: "Ban khong co quyen chinh sua playlist nay",
       });
     }
 
-    // Kiểm tra bài hát đã có trong playlist chưa
     if (playlist.songs.includes(songId)) {
       return res.status(400).json({
         success: false,
-        message: "Bài hát đã có trong playlist",
+        message: "Bai hat da co trong playlist",
       });
     }
 
     playlist.songs.push(songId);
     await playlist.save();
 
-    const updatedPlaylist = await Playlist.findById(req.params.id)
-      .populate("songs", "title artist coverImage duration audioFile"); // ✅ Thêm audioFile
+    const updatedPlaylist = await Playlist.findById(req.params.id).populate(
+      PLAYLIST_SONG_POPULATE
+    );
 
     res.status(200).json({
       success: true,
-      message: "Đã thêm bài hát vào playlist",
+      message: "Da them bai hat vao playlist",
       data: updatedPlaylist,
     });
   } catch (error) {
@@ -218,9 +208,6 @@ const addSongToPlaylist = async (req, res, next) => {
   }
 };
 
-// @desc    Xóa bài hát khỏi playlist
-// @route   PUT /api/playlists/:id/remove-song
-// @access  Private (owner)
 const removeSongFromPlaylist = async (req, res, next) => {
   try {
     const { songId } = req.body;
@@ -229,24 +216,28 @@ const removeSongFromPlaylist = async (req, res, next) => {
     if (!playlist) {
       return res.status(404).json({
         success: false,
-        message: "Không tìm thấy playlist",
+        message: "Khong tim thay playlist",
       });
     }
 
     if (playlist.owner.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
-        message: "Bạn không có quyền chỉnh sửa playlist này",
+        message: "Ban khong co quyen chinh sua playlist nay",
       });
     }
 
-    playlist.songs = playlist.songs.filter((s) => s.toString() !== songId);
+    playlist.songs = playlist.songs.filter((song) => song.toString() !== songId);
     await playlist.save();
+
+    const updatedPlaylist = await Playlist.findById(req.params.id).populate(
+      PLAYLIST_SONG_POPULATE
+    );
 
     res.status(200).json({
       success: true,
-      message: "Đã xóa bài hát khỏi playlist",
-      data: playlist,
+      message: "Da xoa bai hat khoi playlist",
+      data: updatedPlaylist,
     });
   } catch (error) {
     next(error);

@@ -11,11 +11,11 @@ const {
   addSongToPlaylist,
   removeSongFromPlaylist,
 } = require("../controllers/playlistController");
-const { protect } = require("../middleware/auth");
+const { protect, optionalProtect } = require("../middleware/auth");
 
 // Public
 router.get("/public", getPublicPlaylists);
-router.get("/:id", getPlaylist);
+router.get("/:id", optionalProtect, getPlaylist);
 
 // Private
 router.get("/", protect, getMyPlaylists);

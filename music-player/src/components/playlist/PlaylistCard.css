@@ -1,43 +1,50 @@
 /* src/components/playlist/PlaylistCard.css */
 
 .playlist-card {
-  background: #1e1e1e;
-  border-radius: 12px;
-  overflow: visible; /* ✅ Đổi hidden → visible để dropdown không bị cắt */
-  cursor: pointer;
-  transition: background 0.2s, transform 0.2s;
   position: relative;
+  border-radius: 18px;
+  overflow: visible;
+  cursor: pointer;
+  background: rgba(12, 18, 35, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.16);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
 }
 
 .playlist-card:hover {
-  background: #2a2a2a;
   transform: translateY(-4px);
+  background: rgba(16, 24, 45, 0.88);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.22);
 }
 
-/* ✅ Thêm border-radius cho phần cover thay vì dùng overflow card */
 .card-cover {
   position: relative;
   width: 100%;
   aspect-ratio: 1;
-  border-radius: 12px 12px 0 0; /* ✅ Bo góc trên */
-  overflow: hidden;              /* ✅ overflow hidden chỉ ở cover */
+  border-radius: 18px 18px 0 0;
+  overflow: hidden;
 }
 
 .card-cover img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .card-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: linear-gradient(
+    to top,
+    rgba(2, 6, 23, 0.65),
+    rgba(2, 6, 23, 0.18)
+  );
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s ease;
 }
 
 .playlist-card:hover .card-overlay {
@@ -45,101 +52,125 @@
 }
 
 .btn-play-card {
-  background: #1db954;
+  width: 50px;
+  height: 50px;
   border: none;
   border-radius: 50%;
-  width: 48px;
-  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  color: #ffffff;
   font-size: 18px;
   cursor: pointer;
-  transition: transform 0.1s;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: 0 12px 24px rgba(6, 182, 212, 0.2);
 }
 
-.btn-play-card:hover {
-  transform: scale(1.1);
+.btn-play-card:hover:not(:disabled) {
+  transform: scale(1.08);
 }
 
-/* Info */
+.btn-play-card:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.card-empty-cover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.9);
+  color: #475569;
+  font-size: 40px;
+}
+
 .card-info {
-  padding: 12px;
-  position: relative; /* ✅ Thêm */
+  padding: 14px;
+  position: relative;
 }
 
 .card-info-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 8px;
+  gap: 12px;
+  margin-bottom: 10px;
 }
 
 .card-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #fff;
+  max-width: 140px;
   margin: 0 0 4px;
+  color: #f8fafc;
+  font-size: 15px;
+  font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 120px;
 }
 
 .card-songs {
-  font-size: 12px;
-  color: #aaa;
   margin: 0;
+  color: #94a3b8;
+  font-size: 12px;
 }
 
-/* Badge */
 .card-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
   font-size: 11px;
-  padding: 3px 8px;
-  border-radius: 12px;
-  font-weight: 500;
+  font-weight: 700;
 }
 
-.card-badge.public  { background: rgba(29, 185, 84, 0.2); color: #1db954; }
-.card-badge.private { background: rgba(255, 255, 255, 0.1); color: #aaa; }
+.card-badge.public {
+  color: #67e8f9;
+  background: rgba(6, 182, 212, 0.12);
+}
 
-/* ===== MENU ===== */
+.card-badge.private {
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* MENU */
 .card-menu-wrapper {
   position: relative;
   flex-shrink: 0;
 }
 
 .btn-menu {
-  background: none;
+  width: 32px;
+  height: 32px;
   border: none;
-  color: #aaa;
+  border-radius: 10px;
+  background: transparent;
+  color: #94a3b8;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 50%;
-  transition: color 0.2s, background 0.2s;
+  transition: all 0.2s ease;
 }
 
 .btn-menu:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
 }
 
-/* ✅ Dropdown hiện lên trên + z-index cao */
 .card-dropdown {
   position: absolute;
   right: 0;
-  bottom: calc(100% + 4px); /* ✅ Hiện lên trên */
-  background: #2a2a2a;
-  border: 1px solid #444;
-  border-radius: 8px;
+  bottom: calc(100% + 6px);
+  z-index: 9999;
+  min-width: 150px;
   overflow: hidden;
-  z-index: 9999;            /* ✅ Z-index cao */
-  min-width: 140px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
 }
 
 .card-dropdown button {
@@ -147,37 +178,32 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 10px 14px;
-  background: none;
+  padding: 11px 14px;
   border: none;
-  color: #ccc;
+  background: transparent;
+  color: #cbd5e1;
   font-size: 13px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
   white-space: nowrap;
 }
 
 .card-dropdown button:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
 }
 
 .card-dropdown button.danger {
-  color: #e74c3c;
+  color: #fda4af;
 }
 
 .card-dropdown button.danger:hover {
-  background: rgba(231, 76, 60, 0.1);
+  background: rgba(244, 63, 94, 0.12);
 }
 
-/* Empty cover */
-.card-empty-cover {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #2a2a2a;
-  color: #555;
-  font-size: 40px;
+.btn-menu:focus-visible,
+.btn-play-card:focus-visible,
+.card-dropdown button:focus-visible {
+  outline: 2px solid rgba(103, 232, 249, 0.85);
+  outline-offset: 2px;
 }

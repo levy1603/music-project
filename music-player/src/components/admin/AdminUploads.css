@@ -1035,3 +1035,220 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* ── Featuring ── */
+.au-featuring,
+.au-modal-featuring,
+.au-audio-featuring {
+  color: rgba(255, 255, 255, 0.45);
+  font-style: italic;
+  font-size: 0.85em;
+}
+
+/* ── Song tags trong table ── */
+.au-song-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.au-song-tag {
+  padding: 1px 6px;
+  background: rgba(99, 102, 241, 0.12);
+  border-radius: 4px;
+  color: #818cf8;
+  font-size: 0.68rem;
+}
+
+.au-song-tag-more {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* ── Mini badges LRC / MV ── */
+.au-song-badges {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.au-badge-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.au-badge-lrc {
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #818cf8;
+}
+
+.au-badge-video {
+  background: rgba(236, 72, 153, 0.12);
+  border: 1px solid rgba(236, 72, 153, 0.25);
+  color: #f472b6;
+}
+
+/* ── Genre + Lang + Year trong table ── */
+.au-genre-lang {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.au-lang-tag {
+  padding: 2px 7px;
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+  border-radius: 6px;
+  color: #34d399;
+  font-size: 0.7rem;
+  width: fit-content;
+}
+
+.au-year-tag {
+  padding: 2px 7px;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 6px;
+  color: #fbbf24;
+  font-size: 0.7rem;
+  width: fit-content;
+}
+
+/* ── Modal: featuring + tags + description ── */
+.au-modal-featuring {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.9em;
+  font-style: italic;
+}
+
+.au-modal-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.au-modal-tags-icon {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.au-modal-tag {
+  padding: 2px 8px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 10px;
+  color: #818cf8;
+  font-size: 0.75rem;
+}
+
+.au-modal-description {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.5;
+  border-left: 3px solid rgba(255, 255, 255, 0.1);
+}
+
+.au-has-lrc-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: rgba(99, 102, 241, 0.12);
+  border-radius: 8px;
+  color: #818cf8;
+  font-size: 0.75rem;
+}
+
+/* ── Tab LRC ── */
+.au-tab-lrc {
+  padding: 4px 0;
+}
+
+.au-lrc-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(99, 102, 241, 0.08);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+.au-lrc-icon {
+  color: #818cf8;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.au-lrc-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  display: block;
+}
+
+.au-lrc-count {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.au-lrc-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99,102,241,0.3) transparent;
+}
+
+.au-lrc-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.au-lrc-line:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.au-lrc-time {
+  font-size: 0.72rem;
+  color: #818cf8;
+  font-family: monospace;
+  flex-shrink: 0;
+  width: 72px;
+}
+
+.au-lrc-text {
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.5;
+}
+
+.au-lrc-line-raw .au-lrc-text {
+  color: rgba(255, 255, 255, 0.35);
+  font-style: italic;
+}

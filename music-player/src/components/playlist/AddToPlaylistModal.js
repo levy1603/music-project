@@ -1,75 +1,121 @@
-// src/components/playlist/AddToPlaylistModal.js
-import React, { useState, useEffect } from "react";
-import { FaTimes, FaPlus, FaCheck, FaMusic, FaLock, FaGlobe } from "react-icons/fa";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
+import {
+  FaTimes,
+  FaPlus,
+  FaCheck,
+  FaMusic,
+  FaLock,
+  FaGlobe,
+} from "react-icons/fa";
+import { useMusicContext } from "../../context/MusicContext";
+import playlistAPI from "../../api/playlistAPI";
 import "./AddToPlaylistModal.css";
 
-const AddToPlaylistModal = ({ song, onClose }) => {
-  const [playlists, setPlaylists]   = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [adding, setAdding]         = useState(null);   // id playlist đang thêm
-  const [added, setAdded]           = useState([]);     // id playlist đã thêm thành công
-  const [error, setError]           = useState("");
+const DEFAULT_PLAYLIST_COVER = "/images/default-playlist.jpg";
 
-  // ===== FETCH PLAYLISTS =====
-  useEffect(() => {
-    const fetchPlaylists = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await fetch("/api/playlists", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (data.success) setPlaylists(data.data);
-      } catch (err) {
-        setError("Không thể tải danh sách playlist");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPlaylists();
+const AddToPlaylistModal = ({ song, onClose }) => {
+  const [playlists, setPlaylists] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [addingPlaylistId, setAddingPlaylistId] = useState(null);
+  const [addedPlaylistIds, setAddedPlaylistIds] = useState([]);
+  const [error, setError] = useState("");
+
+  const { getCoverURL } = useMusicContext();
+
+  const fetchPlaylists = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await playlistAPI.getAll();
+      setPlaylists(response.data || []);
+    } catch (err) {
+      console.error("Lỗi tải playlist:", err);
+      setError(err.message || "Không thể tải danh sách playlist");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // ===== THÊM VÀO PLAYLIST =====
-  const handleAdd = async (playlistId) => {
-    if (added.includes(playlistId)) return; // Đã thêm rồi thì bỏ qua
+  useEffect(() => {
+    fetchPlaylists();
+  }, [fetchPlaylists]);
 
-    setAdding(playlistId);
+  useEffect(() => {
+    setAddedPlaylistIds([]);
+    setAddingPlaylistId(null);
     setError("");
+  }, [song?._id]);
 
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`/api/playlists/${playlistId}/add-song`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ songId: song._id }),
-      });
-      const data = await res.json();
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
 
-      if (data.success) {
-        setAdded((prev) => [...prev, playlistId]); // Đánh dấu đã thêm
-      } else {
-        // Bài hát đã có trong playlist
-        setError(data.message || "Không thể thêm bài hát");
-        // Vẫn đánh dấu là đã có
-        if (data.message?.includes("đã có")) {
-          setAdded((prev) => [...prev, playlistId]);
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  const handleClose = useCallback(() => {
+    if (addingPlaylistId) return;
+    onClose();
+  }, [addingPlaylistId, onClose]);
+
+  const handleAddToPlaylist = useCallback(
+    async (playlistId) => {
+      if (!song?._id) return;
+      if (addingPlaylistId) return;
+      if (addedPlaylistIds.includes(playlistId)) return;
+
+      try {
+        setAddingPlaylistId(playlistId);
+        setError("");
+
+        const response = await playlistAPI.addSong(playlistId, song._id);
+
+        if (response.success) {
+          setAddedPlaylistIds((prev) => [...prev, playlistId]);
         }
+      } catch (err) {
+        const message = err.message || "Không thể thêm bài hát";
+
+        if (message.toLowerCase().includes("đã có")) {
+          setAddedPlaylistIds((prev) => [...prev, playlistId]);
+        } else {
+          setError(message);
+        }
+      } finally {
+        setAddingPlaylistId(null);
       }
-    } catch (err) {
-      setError("Lỗi kết nối, thử lại sau");
-    } finally {
-      setAdding(null);
-    }
-  };
+    },
+    [song?._id, addingPlaylistId, addedPlaylistIds]
+  );
 
-  return (
-    <div className="atp-overlay" onClick={onClose}>
+  const getPlaylistCover = useCallback(
+    (playlist) => {
+      const firstSong = playlist.songs?.[0];
+      if (firstSong) return getCoverURL(firstSong);
+      return DEFAULT_PLAYLIST_COVER;
+    },
+    [getCoverURL]
+  );
+
+  const playlistItems = useMemo(() => {
+    return playlists.map((playlist) => {
+      const isAdded = addedPlaylistIds.includes(playlist._id);
+      const isAdding = addingPlaylistId === playlist._id;
+
+      return {
+        ...playlist,
+        isAdded,
+        isAdding,
+      };
+    });
+  }, [playlists, addedPlaylistIds, addingPlaylistId]);
+
+  const modalContent = (
+    <div className="atp-overlay" onClick={handleClose}>
       <div className="atp-modal" onClick={(e) => e.stopPropagation()}>
-
-        {/* ===== HEADER ===== */}
         <div className="atp-header">
           <div>
             <h3>Thêm vào Playlist</h3>
@@ -77,15 +123,19 @@ const AddToPlaylistModal = ({ song, onClose }) => {
               <FaMusic /> {song.title} - {song.artist}
             </p>
           </div>
-          <button className="atp-close" onClick={onClose}>
+
+          <button
+            type="button"
+            className="atp-close"
+            onClick={handleClose}
+            disabled={!!addingPlaylistId}
+          >
             <FaTimes />
           </button>
         </div>
 
-        {/* ===== ERROR ===== */}
         {error && <p className="atp-error">{error}</p>}
 
-        {/* ===== DANH SÁCH PLAYLIST ===== */}
         <div className="atp-body">
           {loading ? (
             <div className="atp-loading">
@@ -100,61 +150,64 @@ const AddToPlaylistModal = ({ song, onClose }) => {
             </div>
           ) : (
             <ul className="atp-list">
-              {playlists.map((pl) => {
-                const isAdded   = added.includes(pl._id);
-                const isAdding  = adding === pl._id;
+              {playlistItems.map((playlist) => (
+                <li
+                  key={playlist._id}
+                  className={`atp-item ${playlist.isAdded ? "is-added" : ""}`}
+                  onClick={() => handleAddToPlaylist(playlist._id)}
+                >
+                  <img
+                    src={getPlaylistCover(playlist)}
+                    alt={playlist.name}
+                    className="atp-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = DEFAULT_PLAYLIST_COVER;
+                    }}
+                  />
 
-                return (
-                  <li
-                    key={pl._id}
-                    className={`atp-item ${isAdded ? "is-added" : ""}`}
-                    onClick={() => handleAdd(pl._id)}
-                  >
-                    {/* Ảnh bìa */}
-                    <img
-                      src={
-                        pl.coverImage && pl.coverImage !== "default-playlist.jpg"
-                          ? pl.coverImage
-                          : "/images/default-playlist.jpg"
-                      }
-                      alt={pl.name}
-                      className="atp-cover"
-                    />
-
-                    {/* Thông tin */}
-                    <div className="atp-info">
-                      <span className="atp-name">{pl.name}</span>
-                      <span className="atp-meta">
-                        {pl.isPublic
-                          ? <><FaGlobe /> Công khai</>
-                          : <><FaLock /> Riêng tư</>
-                        }
-                        &nbsp;·&nbsp; {pl.songs?.length || 0} bài
-                      </span>
-                    </div>
-
-                    {/* Nút thêm */}
-                    <button
-                      className={`atp-btn ${isAdded ? "added" : ""}`}
-                      disabled={isAdding || isAdded}
-                    >
-                      {isAdding ? (
-                        <div className="atp-spinner small" />
-                      ) : isAdded ? (
-                        <FaCheck />
+                  <div className="atp-info">
+                    <span className="atp-name">{playlist.name}</span>
+                    <span className="atp-meta">
+                      {playlist.isPublic ? (
+                        <>
+                          <FaGlobe /> Công khai
+                        </>
                       ) : (
-                        <FaPlus />
+                        <>
+                          <FaLock /> Riêng tư
+                        </>
                       )}
-                    </button>
-                  </li>
-                );
-              })}
+                      &nbsp;·&nbsp; {playlist.songs?.length || 0} bài
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    className={`atp-btn ${playlist.isAdded ? "added" : ""}`}
+                    disabled={playlist.isAdding || playlist.isAdded}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddToPlaylist(playlist._id);
+                    }}
+                  >
+                    {playlist.isAdding ? (
+                      <div className="atp-spinner small" />
+                    ) : playlist.isAdded ? (
+                      <FaCheck />
+                    ) : (
+                      <FaPlus />
+                    )}
+                  </button>
+                </li>
+              ))}
             </ul>
           )}
         </div>
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default AddToPlaylistModal;

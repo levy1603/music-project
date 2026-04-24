@@ -8,11 +8,12 @@ const BASE_URL = "http://localhost:5000/api";
 const getToken = () => localStorage.getItem("token");
 
 /* ── Helper: tạo config upload có progress ── */
-const createUploadConfig = (onProgress) => ({
+const createUploadConfig = (onProgress, signal) => ({
   headers: {
     "Content-Type": "multipart/form-data",
     Authorization: `Bearer ${getToken()}`,
   },
+  signal,
   onUploadProgress: (progressEvent) => {
     if (onProgress && progressEvent.total) {
       const percent = Math.round(
@@ -29,8 +30,13 @@ const songAPI = {
   ═══════════════════════════════════════ */
 
   // Lấy danh sách bài hát (chỉ approved)
-  getAll: (params) => {
+  getAll: (params = {}) => {
     return axiosClient.get("/songs", { params });
+  },
+
+  // Lấy filter options
+  getFilterOptions: () => {
+    return axiosClient.get("/songs/filter-options");
   },
 
   // Top bài hát (chỉ approved)
@@ -52,22 +58,21 @@ const songAPI = {
     return axiosClient.get("/songs/my-songs");
   },
 
-    getMyUploads: () => {
+  getMyUploads: () => {
     return axiosClient.get("/songs/my-songs");
   },
 
-
   // Upload bài mới → backend sẽ set status: "pending"
-  create: (formData, onProgress) => {
+  create: (formData, onProgress, signal) => {
     return axios
-      .post(`${BASE_URL}/songs`, formData, createUploadConfig(onProgress))
+      .post(`${BASE_URL}/songs`, formData, createUploadConfig(onProgress, signal))
       .then((res) => res.data);
   },
 
   // Cập nhật bài hát
-  update: (id, formData, onProgress) => {
+  update: (id, formData, onProgress, signal) => {
     return axios
-      .put(`${BASE_URL}/songs/${id}`, formData, createUploadConfig(onProgress))
+      .put(`${BASE_URL}/songs/${id}`, formData, createUploadConfig(onProgress, signal))
       .then((res) => res.data);
   },
 
@@ -90,25 +95,22 @@ const songAPI = {
      ADMIN - Quản lý upload
   ═══════════════════════════════════════ */
 
-  /**
-   * Lấy tất cả uploads (mọi status)
-   * @param {Object} params - { status: "all"|"pending"|"approved"|"rejected", page, limit }
-   */
-adminGetAllUploads: (params = {}) => {
-  return axiosClient.get("/songs/admin/uploads", { params });
-},
+  adminGetAllUploads: (params = {}) => {
+    return axiosClient.get("/songs/admin/uploads", { params });
+  },
 
-adminApproveSong: (id) => {
-  return axiosClient.patch(`/songs/admin/uploads/${id}/approve`);
-},
+  adminApproveSong: (id) => {
+    return axiosClient.patch(`/songs/admin/uploads/${id}/approve`);
+  },
 
-adminRejectSong: (id, reason = "") => {
-  return axiosClient.patch(`/songs/admin/uploads/${id}/reject`, { reason });
-},
+  adminRejectSong: (id, reason = "") => {
+    return axiosClient.patch(`/songs/admin/uploads/${id}/reject`, { reason });
+  },
 
-adminDeleteSong: (id) => {
-  return axiosClient.delete(`/songs/${id}`); // dùng delete thường
-},
+  adminDeleteSong: (id) => {
+    return axiosClient.delete(`/songs/${id}`);
+  },
+
   /* ═══════════════════════════════════════
      HELPER
   ═══════════════════════════════════════ */

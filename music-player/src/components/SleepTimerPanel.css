@@ -1,202 +1,223 @@
 /* src/components/SleepTimerPanel.css */
 
-/* ===== PANEL ===== */
+/* ===== PANEL ROOT ===== */
 .sleep-timer-panel {
-  /* ✅ Không có position, background, border-radius ở đây */
-  /* Để .timer-panel trong MusicPlayer.css kiểm soát hoàn toàn */
-  width:   100%;
-  padding: 16px;
+  width: 100%;
+  padding: 14px;
+  box-sizing: border-box;
+  color: #eef2ff;
 }
 
 /* ===== HEADER ===== */
 .sleep-timer-header {
-  display:         flex;
-  align-items:     center;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom:   16px;
+  margin-bottom: 14px;
 }
 
 .sleep-timer-title {
-  display:     flex;
+  display: flex;
   align-items: center;
-  gap:         8px;
-  font-weight: 700;
-  font-size:   0.95rem;
-  color:       #fff;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 14px;
+  color: #f8fafc;
 }
 
 .sleep-timer-title svg {
-  color:     #1db954;
-  font-size: 1rem;
+  color: #67e8f9;
+  font-size: 14px;
 }
 
 .sleep-timer-close {
-  background:    rgba(255, 255, 255, 0.08);
-  border:        1px solid rgba(255, 255, 255, 0.12);
-  color:         #aaa;
-  width:         28px;
-  height:        28px;
-  border-radius: 50%;
-  cursor:        pointer;
-  display:       flex;
-  align-items:   center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #aeb9d3;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  transition:    all 0.2s;
-  font-size:     0.78rem;
+  font-size: 12px;
+  transition: all 0.2s ease;
 }
 
 .sleep-timer-close:hover {
-  background:   rgba(255, 80, 80, 0.2);
-  color:        #ff6464;
-  border-color: rgba(255, 80, 80, 0.3);
+  background: rgba(244, 114, 182, 0.14);
+  color: #ffd3e5;
 }
 
-/* ===== COUNTDOWN ===== */
+/* ===== ACTIVE COUNTDOWN ===== */
 .sleep-timer-countdown {
-  display:        flex;
+  display: flex;
   flex-direction: column;
-  align-items:    center;
-  gap:            12px;
-  margin-bottom:  16px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
 .countdown-circle {
-  width:           80px;
-  height:          80px;
-  border-radius:   50%;
-  background:      linear-gradient(135deg, #1db954, #17a844);
-  display:         flex;
-  flex-direction:  column;
-  align-items:     center;
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,0.18), transparent 30%),
+    linear-gradient(135deg, #6366f1, #06b6d4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  box-shadow:      0 4px 20px rgba(29, 185, 84, 0.35);
-  animation:       pulse-green 2s ease-in-out infinite;
+  box-shadow:
+    0 10px 28px rgba(6, 182, 212, 0.18),
+    0 0 0 6px rgba(99, 102, 241, 0.06);
+  animation: timerGlow 2s ease-in-out infinite;
 }
 
-@keyframes pulse-green {
-  0%, 100% { box-shadow: 0 4px 20px rgba(29, 185, 84, 0.35); }
-  50%       { box-shadow: 0 4px 30px rgba(29, 185, 84, 0.6);  }
+@keyframes timerGlow {
+  0%, 100% {
+    box-shadow:
+      0 10px 28px rgba(6, 182, 212, 0.18),
+      0 0 0 6px rgba(99, 102, 241, 0.06);
+  }
+  50% {
+    box-shadow:
+      0 14px 32px rgba(6, 182, 212, 0.26),
+      0 0 0 10px rgba(6, 182, 212, 0.03);
+  }
 }
 
 .countdown-time {
-  font-size:   1.3rem;
+  font-size: 18px;
   font-weight: 800;
-  color:       #fff;
+  color: #fff;
   line-height: 1;
 }
 
 .countdown-label {
-  font-size:  0.65rem;
-  color:      rgba(255, 255, 255, 0.75);
-  margin-top: 3px;
+  margin-top: 4px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.78);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .countdown-desc {
-  font-size:  0.82rem;
-  color:      rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  color: #9fb0d2;
   text-align: center;
+  line-height: 1.5;
 }
 
-.countdown-desc strong { color: #1db954; }
+.countdown-desc strong {
+  color: #dbeafe;
+}
 
 /* ===== PRESETS ===== */
 .sleep-timer-presets {
-  display:               grid;
+  display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap:                   6px;
-  margin-bottom:         14px;
+  gap: 8px;
+  margin-bottom: 14px;
 }
 
 .preset-btn {
-  padding:       7px 4px;
-  border:        1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  background:    rgba(255, 255, 255, 0.05);
-  color:         rgba(255, 255, 255, 0.6);
-  font-size:     0.75rem;
-  font-weight:   600;
-  cursor:        pointer;
-  transition:    all 0.2s ease;
-  text-align:    center;
-  font-family:   inherit;
+  padding: 8px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #c4cee3;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  font-family: inherit;
 }
 
 .preset-btn:hover {
-  border-color: rgba(29, 185, 84, 0.5);
-  color:        #1db954;
-  background:   rgba(29, 185, 84, 0.1);
+  border-color: rgba(103, 232, 249, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
 }
 
 .preset-btn.active {
-  border-color: #1db954;
-  background:   rgba(29, 185, 84, 0.2);
-  color:        #1db954;
-  font-weight:  700;
+  border-color: rgba(103, 232, 249, 0.3);
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.22),
+    rgba(6, 182, 212, 0.16)
+  );
+  color: #ecfeff;
+  box-shadow: 0 8px 18px rgba(6, 182, 212, 0.08);
 }
 
-/* ===== CUSTOM INPUT ===== */
+/* ===== CUSTOM ===== */
 .sleep-timer-custom {
   margin-bottom: 14px;
 }
 
 .sleep-timer-custom label {
-  display:        block;
-  font-size:      0.7rem;
-  color:          rgba(255, 255, 255, 0.4);
-  margin-bottom:  8px;
-  font-weight:    500;
+  display: block;
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: #8fa0bd;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .custom-input-row {
-  display:     flex;
+  display: flex;
   align-items: center;
-  gap:         8px;
+  gap: 8px;
 }
 
 .custom-adjust-btn {
-  width:         28px;
-  height:        28px;
-  border-radius: 50%;
-  border:        1px solid rgba(255, 255, 255, 0.1);
-  background:    rgba(255, 255, 255, 0.06);
-  cursor:        pointer;
-  font-size:     1rem;
-  font-weight:   700;
-  color:         rgba(255, 255, 255, 0.6);
-  display:       flex;
-  align-items:   center;
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+  color: #dbeafe;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  transition:    all 0.2s;
-  font-family:   inherit;
-  line-height:   1;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  line-height: 1;
 }
 
 .custom-adjust-btn:hover {
-  border-color: rgba(29, 185, 84, 0.5);
-  color:        #1db954;
-  background:   rgba(29, 185, 84, 0.1);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(103, 232, 249, 0.24);
+  color: #fff;
 }
 
 .custom-input-row input {
-  width:         55px;
-  text-align:    center;
-  border:        1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  padding:       6px;
-  font-size:     0.9rem;
-  font-weight:   700;
-  color:         #fff;
-  background:    rgba(255, 255, 255, 0.06);
-  outline:       none;
-  transition:    border-color 0.2s;
-  font-family:   inherit;
+  width: 58px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 7px 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  outline: none;
+  transition: all 0.2s ease;
+  font-family: inherit;
 }
 
 .custom-input-row input:focus {
-  border-color: #1db954;
-  background:   rgba(29, 185, 84, 0.06);
+  border-color: rgba(103, 232, 249, 0.3);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.08);
 }
 
 .custom-input-row input::-webkit-outer-spin-button,
@@ -206,69 +227,79 @@
 }
 
 .custom-unit {
-  font-size:   0.82rem;
-  color:       rgba(255, 255, 255, 0.4);
-  font-weight: 500;
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 600;
 }
 
 /* ===== DIVIDER ===== */
 .timer-divider {
-  height:     1px;
+  height: 1px;
   background: rgba(255, 255, 255, 0.06);
-  margin:     0 0 14px;
+  margin: 0 0 14px;
 }
 
 /* ===== ACTIONS ===== */
 .sleep-timer-actions {
   display: flex;
-  gap:     8px;
+  gap: 8px;
 }
 
 .timer-action-btn {
-  flex:          1;
-  padding:       10px;
-  border:        none;
-  border-radius: 10px;
-  cursor:        pointer;
-  font-size:     0.85rem;
-  font-weight:   700;
-  display:       flex;
-  align-items:   center;
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  gap:           6px;
-  transition:    all 0.2s ease;
-  font-family:   inherit;
+  gap: 6px;
+  transition: all 0.2s ease;
+  font-family: inherit;
 }
 
 .start-btn {
-  background: #1db954;
-  color:      #fff;
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(6, 182, 212, 0.14);
 }
 
 .start-btn:hover {
-  background: #1ed760;
-  transform:  translateY(-1px);
-  box-shadow: 0 4px 16px rgba(29, 185, 84, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 24px rgba(6, 182, 212, 0.18);
 }
 
 .cancel-btn {
-  background:   rgba(248, 113, 113, 0.12);
-  border:       1px solid rgba(248, 113, 113, 0.25);
-  color:        #f87171;
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.22);
+  color: #fecdd3;
 }
 
 .cancel-btn:hover {
-  background: rgba(248, 113, 113, 0.22);
-  transform:  translateY(-1px);
+  background: rgba(244, 63, 94, 0.18);
+  transform: translateY(-1px);
 }
 
 .restart-btn {
-  background: rgba(29, 185, 84, 0.15);
-  border:     1px solid rgba(29, 185, 84, 0.3);
-  color:      #1db954;
+  background: rgba(99, 102, 241, 0.14);
+  border: 1px solid rgba(129, 140, 248, 0.22);
+  color: #dbeafe;
 }
 
 .restart-btn:hover {
-  background: rgba(29, 185, 84, 0.25);
-  transform:  translateY(-1px);
+  background: rgba(99, 102, 241, 0.22);
+  transform: translateY(-1px);
+}
+
+/* ===== FOCUS ===== */
+.sleep-timer-close:focus-visible,
+.preset-btn:focus-visible,
+.custom-adjust-btn:focus-visible,
+.custom-input-row input:focus-visible,
+.timer-action-btn:focus-visible {
+  outline: 2px solid rgba(103, 232, 249, 0.55);
+  outline-offset: 2px;
 }

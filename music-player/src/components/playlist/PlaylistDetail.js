@@ -1,5 +1,4 @@
-// src/components/playlist/PlaylistDetail.js
-import React from "react";
+import React, { useMemo, useCallback } from "react";
 import {
   FaArrowLeft,
   FaPlay,
@@ -19,54 +18,94 @@ const PlaylistDetail = ({
   onEdit,
   onDelete,
   onRemoveSong,
+  removingSong = false,
+  deleting = false,
 }) => {
   const { playSong, getCoverURL } = useMusicContext();
 
-  // ✅ Lấy ảnh bìa bài hát đầu tiên
-  const getPlaylistCover = () => {
-    const firstSong = playlist.songs?.[0];
-    if (firstSong) {
-      return getCoverURL(firstSong);
-    }
-    return "/images/default-playlist.jpg";
-  };
+  const songs = useMemo(
+    () => (playlist?.songs || []).filter(Boolean),
+    [playlist?.songs]
+  );
 
-  const formatDuration = (seconds) => {
+  const playlistCover = useMemo(() => {
+    const firstSong = songs[0];
+    return firstSong ? getCoverURL(firstSong) : "/images/default-playlist.jpg";
+  }, [songs, getCoverURL]);
+
+  const formatDuration = useCallback((seconds) => {
     if (!seconds) return "--:--";
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  };
+
+    const minutes = Math.floor(seconds / 60);
+    const remainSeconds = seconds % 60;
+
+    return `${minutes}:${remainSeconds.toString().padStart(2, "0")}`;
+  }, []);
+
+  const handlePlayAll = useCallback(() => {
+    if (!songs.length || deleting) return;
+    playSong(songs[0], "playlist", songs);
+  }, [songs, deleting, playSong]);
+
+  const handlePlaySong = useCallback(
+    (song) => {
+      if (deleting) return;
+      playSong(song, "playlist", songs);
+    },
+    [deleting, playSong, songs]
+  );
+
+  const handleRemoveSongClick = useCallback(
+    (event, songId) => {
+      event.stopPropagation();
+      if (removingSong || deleting) return;
+      onRemoveSong(songId);
+    },
+    [removingSong, deleting, onRemoveSong]
+  );
+
+  const handleDeletePlaylist = useCallback(() => {
+    if (deleting) return;
+    onDelete();
+  }, [deleting, onDelete]);
+
+  const handleEditPlaylist = useCallback(() => {
+    if (deleting) return;
+    onEdit();
+  }, [deleting, onEdit]);
 
   return (
     <div className="playlist-detail">
-
-      {/* ===== HEADER ===== */}
       <div className="detail-header">
-        <button className="btn-back" onClick={onBack}>
+        <button className="btn-back" onClick={onBack} disabled={deleting}>
           <FaArrowLeft /> Quay lại
         </button>
       </div>
 
-      {/* ===== THÔNG TIN PLAYLIST ===== */}
       <div className="detail-hero">
-
-        {/* ✅ Dùng getPlaylistCover() */}
         <img
-          src={getPlaylistCover()}
+          src={playlistCover}
           alt={playlist.name}
           className="detail-cover"
           onError={(e) => {
-            e.target.src = "/images/default-playlist.jpg";
+            e.currentTarget.src = "/images/default-playlist.jpg";
           }}
         />
 
         <div className="detail-meta">
-          <span className={`detail-badge ${playlist.isPublic ? "public" : "private"}`}>
+          <span
+            className={`detail-badge ${
+              playlist.isPublic ? "public" : "private"
+            }`}
+          >
             {playlist.isPublic ? (
-              <><FaGlobe /> Công khai</>
+              <>
+                <FaGlobe /> Công khai
+              </>
             ) : (
-              <><FaLock /> Riêng tư</>
+              <>
+                <FaLock /> Riêng tư
+              </>
             )}
           </span>
 
@@ -77,39 +116,41 @@ const PlaylistDetail = ({
           )}
 
           <p className="detail-info">
-            <FaMusic /> {playlist.songs?.length || 0} bài hát
+            <FaMusic /> {songs.length} bài hát
           </p>
 
-          {/* ===== ACTIONS ===== */}
           <div className="detail-actions">
             <button
               className="btn-play-all"
-              onClick={() => {
-                if (playlist.songs?.[0]) {
-                  playSong(playlist.songs[0], "playlist", playlist.songs);
-                }
-              }}
-              disabled={!playlist.songs?.length}
+              onClick={handlePlayAll}
+              disabled={!songs.length || deleting}
             >
               <FaPlay /> Phát tất cả
             </button>
 
-            <button className="btn-edit" onClick={onEdit}>
+            <button
+              className="btn-edit"
+              onClick={handleEditPlaylist}
+              disabled={deleting}
+            >
               <FaEdit /> Chỉnh sửa
             </button>
 
-            <button className="btn-delete" onClick={onDelete}>
-              <FaTrash /> Xóa playlist
+            <button
+              className="btn-delete"
+              onClick={handleDeletePlaylist}
+              disabled={deleting}
+            >
+              <FaTrash /> {deleting ? "Đang xóa..." : "Xóa playlist"}
             </button>
           </div>
         </div>
       </div>
 
-      {/* ===== DANH SÁCH BÀI HÁT ===== */}
       <div className="detail-songs">
         <h3>Danh sách bài hát</h3>
 
-        {!playlist.songs?.length ? (
+        {!songs.length ? (
           <div className="detail-empty">
             <FaMusic />
             <p>Playlist này chưa có bài hát nào</p>
@@ -125,22 +166,22 @@ const PlaylistDetail = ({
                 <th></th>
               </tr>
             </thead>
+
             <tbody>
-              {playlist.songs.map((song, index) => (
+              {songs.map((song, index) => (
                 <tr
                   key={song._id}
                   className="song-row"
-                  onClick={() => playSong(song, "playlist", playlist.songs)}
+                  onClick={() => handlePlaySong(song)}
                 >
                   <td className="song-index">{index + 1}</td>
 
                   <td className="song-title">
-                    {/* ✅ Dùng getCoverURL */}
                     <img
                       src={getCoverURL(song)}
                       alt={song.title}
                       onError={(e) => {
-                        e.target.src = "/images/default-cover.jpg";
+                        e.currentTarget.src = "/images/default-cover.jpg";
                       }}
                     />
                     <span>{song.title}</span>
@@ -154,11 +195,10 @@ const PlaylistDetail = ({
 
                   <td className="song-remove">
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRemoveSong(song._id);
-                      }}
+                      type="button"
+                      onClick={(e) => handleRemoveSongClick(e, song._id)}
                       title="Xóa khỏi playlist"
+                      disabled={removingSong || deleting}
                     >
                       <FaTrashAlt />
                     </button>
@@ -167,6 +207,12 @@ const PlaylistDetail = ({
               ))}
             </tbody>
           </table>
+        )}
+
+        {removingSong && (
+          <div className="detail-processing-text">
+            Đang xóa bài hát khỏi playlist...
+          </div>
         )}
       </div>
     </div>

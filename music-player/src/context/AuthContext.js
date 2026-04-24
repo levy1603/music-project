@@ -4,6 +4,7 @@ import authAPI from "../api/authAPI";
 
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
+const extractPayload = (response) => response?.data || response;
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser]       = useState(null);
@@ -16,7 +17,7 @@ export const AuthProvider = ({ children }) => {
         try {
           const res = await authAPI.getMe();
           // ✅ getMe trả về res.data.data
-          const userData = res.data.data;
+          const userData = extractPayload(res);
           setUser(userData);
           localStorage.setItem("user", JSON.stringify(userData));
         } catch (error) {
@@ -34,7 +35,7 @@ export const AuthProvider = ({ children }) => {
     const res = await authAPI.register({ username, email, password });
 
     // ✅ Fix: kiểm tra cả 2 format
-    const resData = res.data.data || res.data;
+    const resData = extractPayload(res);
     const { token, ...userData } = resData;
 
     localStorage.setItem("token", token);
@@ -47,7 +48,7 @@ export const AuthProvider = ({ children }) => {
     const res = await authAPI.login({ email, password });
 
     // ✅ Fix: kiểm tra cả 2 format
-    const resData = res.data.data || res.data;
+    const resData = extractPayload(res);
     const { token, ...userData } = resData;
 
     localStorage.setItem("token", token);
@@ -71,7 +72,7 @@ export const AuthProvider = ({ children }) => {
   const refreshUser = async () => {
     try {
       const res      = await authAPI.getMe();
-      const userData = res.data.data || res.data;
+      const userData = extractPayload(res);
       setUser(userData);
       localStorage.setItem("user", JSON.stringify(userData));
     } catch (error) {

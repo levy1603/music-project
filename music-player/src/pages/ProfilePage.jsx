@@ -1,10 +1,18 @@
-// src/pages/ProfilePage.jsx
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  FaUser, FaEdit, FaSave, FaTimes, FaCamera,
-  FaArrowLeft, FaMusic, FaHeart, FaInfoCircle,
-  FaIdBadge, FaSpinner, FaCheck,
+  FaUser,
+  FaEdit,
+  FaSave,
+  FaTimes,
+  FaCamera,
+  FaArrowLeft,
+  FaMusic,
+  FaHeart,
+  FaInfoCircle,
+  FaIdBadge,
+  FaSpinner,
+  FaCheck,
 } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
 import userAPI from "../api/userAPI";
@@ -12,78 +20,102 @@ import getAvatarURL from "../utils/getAvatarURL";
 import MySongsList from "../components/MySongsList";
 import "./ProfilePage.css";
 
+const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
+const DEFAULT_AVATAR = "https://i.pravatar.cc/150";
+
 const ProfilePage = () => {
   const { user, updateUser, refreshUser } = useAuth();
   const navigate = useNavigate();
-
-  // ===== STATE =====
-  const [isEditing, setIsEditing]         = useState(false);
-  const [saving, setSaving]               = useState(false);
-  const [saveSuccess, setSaveSuccess]     = useState(false);
-  const [error, setError]                 = useState("");
-  const [avatarPreview, setAvatarPreview] = useState(null);
-  const [avatarFile, setAvatarFile]       = useState(null);
-  const [showMySongs, setShowMySongs]     = useState(false); // ✅ THÊM
-
-  const [form, setForm] = useState({
-    username : user?.username || "",
-    nickname : user?.nickname || "",
-    bio      : user?.bio      || "",
-  });
-
   const avatarInputRef = useRef(null);
 
-  // ✅ Refresh data khi vào trang
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [error, setError] = useState("");
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [showMySongs, setShowMySongs] = useState(false);
+  const [form, setForm] = useState({
+    username: user?.username || "",
+    nickname: user?.nickname || "",
+    bio: user?.bio || "",
+  });
+
   useEffect(() => {
     refreshUser();
-  }, []);
+  }, [refreshUser]);
 
-  // ✅ Sync form khi user thay đổi
   useEffect(() => {
-    if (user) {
-      setForm({
-        username : user.username || "",
-        nickname : user.nickname || "",
-        bio      : user.bio      || "",
-      });
-    }
+    if (!user) return;
+
+    setForm({
+      username: user.username || "",
+      nickname: user.nickname || "",
+      bio: user.bio || "",
+    });
   }, [user]);
 
-  // ✅ Tính count
-  const favoriteCount = user?.favoriteCount ?? user?.favorites?.length ?? 0;
-  const uploadCount   = user?.uploadCount   ?? 0;
+  const favoriteCount = useMemo(
+    () => user?.favoriteCount ?? user?.favorites?.length ?? 0,
+    [user]
+  );
 
-  // ✅ Avatar URL
-  const currentAvatar = avatarPreview || getAvatarURL(user?.avatar, 150);
+  const uploadCount = useMemo(() => user?.uploadCount ?? 0, [user]);
 
-  // ===== XỬ LÝ FORM =====
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const currentAvatar = useMemo(
+    () => avatarPreview || getAvatarURL(user?.avatar, 150),
+    [avatarPreview, user?.avatar]
+  );
+
+  const joinedDate = useMemo(() => {
+    if (!user?.createdAt) return "Không rõ";
+    return new Date(user.createdAt).toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  }, [user?.createdAt]);
+
+  const resetForm = useCallback(() => {
+    setForm({
+      username: user?.username || "",
+      nickname: user?.nickname || "",
+      bio: user?.bio || "",
+    });
+    setAvatarPreview(null);
+    setAvatarFile(null);
     setError("");
-  };
+  }, [user]);
 
-  // ===== CHỌN AVATAR =====
-  const handleAvatarChange = (e) => {
-    const file = e.target.files[0];
+  const handleChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+    setError("");
+  }, []);
+
+  const handleAvatarChange = useCallback((e) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
       setError("Vui lòng chọn file ảnh!");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
+
+    if (file.size > MAX_AVATAR_SIZE) {
       setError("Ảnh không được vượt quá 5MB!");
       return;
     }
 
     setAvatarFile(file);
-    const reader = new FileReader();
-    reader.onload = (ev) => setAvatarPreview(ev.target.result);
-    reader.readAsDataURL(file);
-  };
+    setError("");
 
-  // ===== LƯU PROFILE =====
-  const handleSave = async () => {
+    const reader = new FileReader();
+    reader.onload = (event) => setAvatarPreview(event.target?.result);
+    reader.readAsDataURL(file);
+  }, []);
+
+  const handleSave = useCallback(async () => {
     if (!form.username.trim()) {
       setError("Tên người dùng không được để trống!");
       return;
@@ -95,88 +127,67 @@ const ProfilePage = () => {
     try {
       let updatedUser = { ...user };
 
-      // Upload avatar nếu có
       if (avatarFile) {
         const formData = new FormData();
         formData.append("avatar", avatarFile);
 
-        const avatarRes  = await userAPI.updateAvatar(formData);
-        const avatarPath = avatarRes.data?.data?.avatar
-          || avatarRes.data?.avatar;
+        const avatarRes = await userAPI.updateAvatar(formData);
+        const avatarPath = avatarRes.data?.data?.avatar || avatarRes.data?.avatar;
 
         if (avatarPath) {
           updatedUser.avatar = avatarPath;
         }
       }
 
-      // Cập nhật profile text
       const profileRes = await userAPI.updateProfile({
-        username : form.username.trim(),
-        nickname : form.nickname.trim(),
-        bio      : form.bio.trim(),
+        username: form.username.trim(),
+        nickname: form.nickname.trim(),
+        bio: form.bio.trim(),
       });
 
       const profileData = profileRes.data?.data || profileRes.data;
       updatedUser = { ...updatedUser, ...profileData };
 
-      // Cập nhật context + localStorage
       updateUser(updatedUser);
-
-      // Reset state
       setAvatarFile(null);
       setAvatarPreview(null);
       setIsEditing(false);
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
 
+      setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Lỗi khi cập nhật thông tin!"
-      );
+      setError(err.response?.data?.message || "Lỗi khi cập nhật thông tin!");
     } finally {
       setSaving(false);
     }
-  };
+  }, [form, user, avatarFile, updateUser]);
 
-  // ===== HỦY EDIT =====
-  const handleCancel = () => {
-    setForm({
-      username : user?.username || "",
-      nickname : user?.nickname || "",
-      bio      : user?.bio      || "",
-    });
-    setAvatarPreview(null);
-    setAvatarFile(null);
-    setError("");
+  const handleCancel = useCallback(() => {
+    resetForm();
     setIsEditing(false);
-  };
+  }, [resetForm]);
 
   return (
     <div className="profile-page">
-
-      {/* ===== BACK BUTTON ===== */}
+      {/* Nút quay lại */}
       <button className="profile-back-btn" onClick={() => navigate(-1)}>
         <FaArrowLeft />
         <span>Quay lại</span>
       </button>
 
       <div className="profile-container">
-
-        {/* ===== CỘT TRÁI - AVATAR ===== */}
+        {/* Cột trái */}
         <div className="profile-left">
-
-          {/* Avatar */}
           <div className="avatar-wrapper">
             <img
               src={currentAvatar}
               alt="avatar"
               className="profile-avatar"
               onError={(e) => {
-                e.target.src = "https://i.pravatar.cc/150";
+                e.target.src = DEFAULT_AVATAR;
               }}
             />
 
-            {/* Overlay camera khi edit */}
             {isEditing && (
               <button
                 className="avatar-camera-btn"
@@ -188,7 +199,6 @@ const ProfilePage = () => {
               </button>
             )}
 
-            {/* Input file ẩn */}
             <input
               ref={avatarInputRef}
               type="file"
@@ -197,20 +207,14 @@ const ProfilePage = () => {
               onChange={handleAvatarChange}
             />
 
-            {/* Badge online */}
             <div className="avatar-badge" />
           </div>
 
-          {/* Tên + nickname */}
           <h2 className="profile-display-name">{user?.username}</h2>
-          {user?.nickname && (
-            <p className="profile-nickname">@{user.nickname}</p>
-          )}
 
-          {/* Stats */}
+          {user?.nickname && <p className="profile-nickname">@{user.nickname}</p>}
+
           <div className="profile-stats">
-
-            {/* ✅ Bài đã upload - click để xem */}
             <div
               className="profile-stat-card clickable"
               onClick={() => setShowMySongs(true)}
@@ -221,7 +225,6 @@ const ProfilePage = () => {
               <span className="profile-stat-label">Bài đã upload</span>
             </div>
 
-            {/* Yêu thích */}
             <div className="profile-stat-card">
               <FaHeart className="profile-stat-icon heart" />
               <span className="profile-stat-number">{favoriteCount}</span>
@@ -229,25 +232,18 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          {/* Nút chỉnh sửa */}
           {!isEditing && (
-            <button
-              className="edit-profile-btn"
-              onClick={() => setIsEditing(true)}
-            >
+            <button className="edit-profile-btn" onClick={() => setIsEditing(true)}>
               <FaEdit /> Chỉnh sửa hồ sơ
             </button>
           )}
         </div>
 
-        {/* ===== CỘT PHẢI - THÔNG TIN ===== */}
+        {/* Cột phải */}
         <div className="profile-right">
-
-          {/* Header */}
           <div className="profile-right-header">
-            <h3>
-              {isEditing ? "✏️ Chỉnh sửa hồ sơ" : "👤 Thông tin cá nhân"}
-            </h3>
+            <h3>{isEditing ? "✏️ Chỉnh sửa hồ sơ" : "👤 Thông tin cá nhân"}</h3>
+
             {saveSuccess && (
               <div className="save-success-badge">
                 <FaCheck /> Đã lưu!
@@ -255,17 +251,13 @@ const ProfilePage = () => {
             )}
           </div>
 
-          {/* Error */}
           {error && (
             <div className="profile-error">
               <FaTimes /> {error}
             </div>
           )}
 
-          {/* ===== FORM ===== */}
           <div className="profile-form">
-
-            {/* Username */}
             <div className="form-group">
               <label>
                 <FaUser className="label-icon" />
@@ -283,14 +275,11 @@ const ProfilePage = () => {
                 />
               ) : (
                 <div className="profile-value">
-                  {user?.username || (
-                    <span className="empty-value">Chưa cập nhật</span>
-                  )}
+                  {user?.username || <span className="empty-value">Chưa cập nhật</span>}
                 </div>
               )}
             </div>
 
-            {/* Nickname */}
             <div className="form-group">
               <label>
                 <FaIdBadge className="label-icon" />
@@ -311,15 +300,15 @@ const ProfilePage = () => {
                 </div>
               ) : (
                 <div className="profile-value">
-                  {user?.nickname
-                    ? `@${user.nickname}`
-                    : <span className="empty-value">Chưa cập nhật</span>
-                  }
+                  {user?.nickname ? (
+                    `@${user.nickname}`
+                  ) : (
+                    <span className="empty-value">Chưa cập nhật</span>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Email - chỉ đọc */}
             <div className="form-group">
               <label>
                 <FaInfoCircle className="label-icon" />
@@ -331,7 +320,6 @@ const ProfilePage = () => {
               </div>
             </div>
 
-            {/* Bio */}
             <div className="form-group">
               <label>
                 <FaInfoCircle className="label-icon" />
@@ -348,9 +336,7 @@ const ProfilePage = () => {
                     rows={4}
                     maxLength={200}
                   />
-                  <span className="char-count">
-                    {form.bio.length}/200
-                  </span>
+                  <span className="char-count">{form.bio.length}/200</span>
                 </>
               ) : (
                 <div className="profile-value bio">
@@ -363,44 +349,30 @@ const ProfilePage = () => {
               )}
             </div>
 
-            {/* Ngày tham gia */}
             <div className="form-group">
               <label>
                 <FaInfoCircle className="label-icon" />
                 Ngày tham gia
               </label>
-              <div className="profile-value readonly">
-                {user?.createdAt
-                  ? new Date(user.createdAt).toLocaleDateString("vi-VN", {
-                      day   : "2-digit",
-                      month : "2-digit",
-                      year  : "numeric",
-                    })
-                  : "Không rõ"
-                }
-              </div>
+              <div className="profile-value readonly">{joinedDate}</div>
             </div>
           </div>
 
-          {/* ===== ACTION BUTTONS ===== */}
           {isEditing && (
             <div className="profile-actions">
-              <button
-                className="cancel-btn"
-                onClick={handleCancel}
-                disabled={saving}
-              >
+              <button className="cancel-btn" onClick={handleCancel} disabled={saving}>
                 <FaTimes /> Hủy
               </button>
-              <button
-                className="save-btn"
-                onClick={handleSave}
-                disabled={saving}
-              >
+
+              <button className="save-btn" onClick={handleSave} disabled={saving}>
                 {saving ? (
-                  <><FaSpinner className="spinning" /> Đang lưu...</>
+                  <>
+                    <FaSpinner className="spinning" /> Đang lưu...
+                  </>
                 ) : (
-                  <><FaSave /> Lưu thay đổi</>
+                  <>
+                    <FaSave /> Lưu thay đổi
+                  </>
                 )}
               </button>
             </div>
@@ -408,10 +380,8 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      {/* ===== MY SONGS LIST ===== */}
-      {showMySongs && (
-        <MySongsList onClose={() => setShowMySongs(false)} />
-      )}
+      {/* Danh sách bài đã upload */}
+      {showMySongs && <MySongsList onClose={() => setShowMySongs(false)} />}
     </div>
   );
 };
