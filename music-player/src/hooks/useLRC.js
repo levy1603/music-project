@@ -1,9 +1,4 @@
 // src/hooks/useLRC.js
-
-/**
- * Parse chuỗi LRC thành mảng { time, text }
- * [mm:ss.xx] hoặc [mm:ss]
- */
 export const parseLRC = (lrcText) => {
   if (!lrcText) return null;
 
@@ -25,8 +20,6 @@ export const parseLRC = (lrcText) => {
       const time = minutes * 60 + seconds + centiseconds / 100;
       times.push(time);
     }
-
-    // Lấy phần text (bỏ tất cả timestamp)
     const text = line.replace(/\[\d{2}:\d{2}\.?\d{0,2}\]/g, "").trim();
 
     if (times.length > 0 && text) {
@@ -38,9 +31,6 @@ export const parseLRC = (lrcText) => {
   return result.sort((a, b) => a.time - b.time);
 };
 
-/**
- * Kiểm tra lyrics có phải LRC format không
- */
 export const isLRCFormat = (text) => {
   if (!text) return false;
   return /\[\d{2}:\d{2}/.test(text);

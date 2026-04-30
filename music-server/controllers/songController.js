@@ -1,19 +1,31 @@
 // controllers/songController.js
-const Song                = require("../models/Song");
-const User                = require("../models/User");
-const Playlist            = require("../models/Playlist");
-const mm                  = require("music-metadata");
-const path                = require("path");
-const notificationService = require("../services/notificationService");
-const PlayHistory         = require("../models/PlayHistory");
+const Song                    = require("../models/Song");
+const User                    = require("../models/User");
+const Playlist                = require("../models/Playlist");
+const mm                      = require("music-metadata");
+const path                    = require("path");
+const axios                   = require("axios"); // npm install axios
+const notificationService     = require("../services/notificationService");
+const PlayHistory             = require("../models/PlayHistory");
+const { deleteSongFromCloudinary, deleteFromCloudinary } = require("../config/cloudinary");
 
 /* ═══════════════════════════════════════════
-   HELPER
+   HELPERS
 ═══════════════════════════════════════════ */
-const getAudioDuration = async (filename) => {
+
+/* ── Đọc duration từ URL (Cloudinary) ── */
+const getAudioDuration = async (audioUrl) => {
+  if (!audioUrl) return 0;
   try {
-    const audioPath = path.join(__dirname, "../uploads/songs", filename);
-    const metadata  = await mm.parseFile(audioPath);
+    // Download một phần nhỏ để đọc metadata
+    const response = await axios.get(audioUrl, {
+      responseType: "arraybuffer",
+      headers:      { Range: "bytes=0-1048576" }, // Chỉ lấy 1MB đầu
+      timeout:      10000,
+    });
+
+    const buffer   = Buffer.from(response.data);
+    const metadata = await mm.parseBuffer(buffer, { duration: true });
     return Math.round(metadata.format.duration || 0);
   } catch (e) {
     console.log("⚠️ Không đọc được duration:", e.message);
@@ -21,7 +33,7 @@ const getAudioDuration = async (filename) => {
   }
 };
 
-/* ── Parse tags từ request body ── */
+/* ── Parse tags ── */
 const parseTags = (rawTags) => {
   if (!rawTags) return [];
   if (Array.isArray(rawTags)) return rawTags.filter(Boolean);
@@ -29,9 +41,15 @@ const parseTags = (rawTags) => {
     const parsed = JSON.parse(rawTags);
     return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
   } catch {
-    // Nếu là string dạng "tag1,tag2"
     return rawTags.split(",").map((t) => t.trim()).filter(Boolean);
   }
+};
+
+/* ── Lấy URL từ file được upload bởi Cloudinary ── */
+const getFileUrl = (file) => {
+  if (!file) return null;
+  // multer-storage-cloudinary lưu URL vào file.path
+  return file.path || null;
 };
 
 /* ═══════════════════════════════════════════
@@ -39,63 +57,55 @@ const parseTags = (rawTags) => {
 ═══════════════════════════════════════════ */
 const getSongs = async (req, res, next) => {
   try {
-    const page = parseInt(req.query.page) || 1;
+    const page  = parseInt(req.query.page)  || 1;
     const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
+    const skip  = (page - 1) * limit;
 
-    const {
-      search,
-      genre,
-      artist,
-      tag,
-      year,
-      album,
-      sort,
-    } = req.query;
+    const { search, genre, artist, tag, year, album, sort } = req.query;
 
     const query = {
-      status: "approved",
+      status:    "approved",
       isDeleted: { $ne: true },
     };
 
     if (search) {
       query.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { artist: { $regex: search, $options: "i" } },
-        { album: { $regex: search, $options: "i" } },
+        { title:     { $regex: search, $options: "i" } },
+        { artist:    { $regex: search, $options: "i" } },
+        { album:     { $regex: search, $options: "i" } },
         { featuring: { $regex: search, $options: "i" } },
-        { tags: { $in: [new RegExp(search, "i")] } },
+        { tags:      { $in: [new RegExp(search, "i")] } },
       ];
     }
 
-    if (genre) query.genre = genre;
-    if (artist) query.artist = { $regex: artist, $options: "i" };
-    if (album) query.album = { $regex: album, $options: "i" };
-    if (tag) query.tags = tag;
-    if (year) query.releaseYear = parseInt(year);
+    if (genre)  query.genre       = genre;
+    if (artist) query.artist      = { $regex: artist, $options: "i" };
+    if (album)  query.album       = { $regex: album,  $options: "i" };
+    if (tag)    query.tags        = tag;
+    if (year)   query.releaseYear = parseInt(year);
 
     let sortOption = { createdAt: -1 };
-
-    if (sort === "popular") sortOption = { playCount: -1 };
+    if (sort === "popular") sortOption = { playCount:  -1 };
     else if (sort === "likes") sortOption = { likeCount: -1 };
-    else if (sort === "title") sortOption = { title: 1 };
-    else if (sort === "year") sortOption = { releaseYear: -1 };
+    else if (sort === "title") sortOption = { title:      1 };
+    else if (sort === "year")  sortOption = { releaseYear:-1 };
 
-    const total = await Song.countDocuments(query);
-
-    const songs = await Song.find(query)
-      .populate("uploadedBy", "username avatar")
-      .sort(sortOption)
-      .skip(skip)
-      .limit(limit);
+    const [total, songs] = await Promise.all([
+      Song.countDocuments(query),
+      Song.find(query)
+        .populate("uploadedBy", "username avatar")
+        .sort(sortOption)
+        .skip(skip)
+        .limit(limit),
+    ]);
 
     res.status(200).json({
-      success: true,
-      count: songs.length,
+      success:     true,
+      count:       songs.length,
       total,
-      totalPages: Math.ceil(total / limit),
+      totalPages:  Math.ceil(total / limit),
       currentPage: page,
-      data: songs,
+      data:        songs,
     });
   } catch (error) {
     next(error);
@@ -126,33 +136,36 @@ const getSong = async (req, res, next) => {
   }
 };
 
+/* ═══════════════════════════════════════════
+   PUBLIC: Lấy filter options
+═══════════════════════════════════════════ */
 const getSongFilterOptions = async (req, res, next) => {
   try {
     const baseMatch = {
-      status: "approved",
+      status:    "approved",
       isDeleted: { $ne: true },
     };
 
     const [years, genres, albums, tagsAgg] = await Promise.all([
       Song.distinct("releaseYear", baseMatch),
-      Song.distinct("genre", baseMatch),
-      Song.distinct("album", baseMatch),
+      Song.distinct("genre",       baseMatch),
+      Song.distinct("album",       baseMatch),
       Song.aggregate([
-        { $match: baseMatch },
+        { $match:  baseMatch },
         { $unwind: "$tags" },
-        { $match: { tags: { $ne: null, $ne: "" } } },
-        { $group: { _id: "$tags" } },
-        { $sort: { _id: 1 } },
+        { $match:  { tags: { $ne: null, $ne: "" } } },
+        { $group:  { _id: "$tags" } },
+        { $sort:   { _id: 1 } },
       ]),
     ]);
 
     res.status(200).json({
       success: true,
       data: {
-        years: (years || []).filter(Boolean).sort((a, b) => b - a),
+        years:  (years  || []).filter(Boolean).sort((a, b) => b - a),
         genres: (genres || []).filter(Boolean).sort(),
         albums: (albums || []).filter(Boolean).sort(),
-        tags: tagsAgg.map((t) => t._id).filter(Boolean),
+        tags:   tagsAgg.map((t) => t._id).filter(Boolean),
       },
     });
   } catch (error) {
@@ -164,9 +177,13 @@ const getSongFilterOptions = async (req, res, next) => {
    USER: Upload bài hát
 ═══════════════════════════════════════════ */
 const createSong = async (req, res, next) => {
+  // Track URLs đã upload để rollback nếu DB lỗi
+  const uploadedUrls = { audio: null, cover: null, video: null };
+
   try {
     const {
-      title, artist, featuring, album, genre, releaseYear, lyrics, lrc, tags: rawTags,
+      title, artist, featuring, album,
+      genre, releaseYear, lyrics, lrc, tags: rawTags,
     } = req.body;
 
     let audioFile  = "";
@@ -176,12 +193,19 @@ const createSong = async (req, res, next) => {
 
     if (req.files) {
       if (req.files.audio?.[0]) {
-        audioFile = req.files.audio[0].filename;
-        duration  = await getAudioDuration(audioFile);
+        audioFile          = getFileUrl(req.files.audio[0]);
+        uploadedUrls.audio = audioFile;
+        duration           = await getAudioDuration(audioFile);
         console.log(`🎵 Duration: ${duration}s`);
       }
-      if (req.files.cover?.[0]) coverImage = req.files.cover[0].filename;
-      if (req.files.video?.[0]) videoFile  = req.files.video[0].filename;
+      if (req.files.cover?.[0]) {
+        coverImage         = getFileUrl(req.files.cover[0]);
+        uploadedUrls.cover = coverImage;
+      }
+      if (req.files.video?.[0]) {
+        videoFile          = getFileUrl(req.files.video[0]);
+        uploadedUrls.video = videoFile;
+      }
     }
 
     if (!audioFile) {
@@ -196,19 +220,17 @@ const createSong = async (req, res, next) => {
     const song = await Song.create({
       title,
       artist,
-      featuring:   featuring                || "",
-      album:       album                    || "Single",
-      genre:       genre                    || "Pop",
-      releaseYear: releaseYear
-        ? parseInt(releaseYear)
-        : new Date().getFullYear(),
+      featuring:   featuring   || "",
+      album:       album       || "Single",
+      genre:       genre       || "Pop",
+      releaseYear: releaseYear ? parseInt(releaseYear) : new Date().getFullYear(),
       tags,
-      lyrics:      lyrics                   || "",
-      lrc:         lrc                      || "",
+      lyrics:      lyrics      || "",
+      lrc:         lrc         || "",
       duration,
-      audioFile,
-      coverImage,
-      videoFile,
+      audioFile,   // ← Giờ là URL Cloudinary
+      coverImage,  // ← Giờ là URL Cloudinary
+      videoFile,   // ← Giờ là URL Cloudinary
       uploadedBy:  req.user._id,
       status:      "pending",
     });
@@ -216,7 +238,7 @@ const createSong = async (req, res, next) => {
     const populatedSong = await Song.findById(song._id)
       .populate("uploadedBy", "username avatar");
 
-    console.log(`🎤 LRC: ${lrc ? `Có (${lrc.length} ký tự)` : "Không"}`);
+    console.log(`🎤 LRC:  ${lrc  ? `Có (${lrc.length} ký tự)` : "Không"}`);
     console.log(`🏷️  Tags: ${tags.length > 0 ? tags.join(", ") : "Không có"}`);
 
     try {
@@ -226,12 +248,12 @@ const createSong = async (req, res, next) => {
         title:   "🎵 Bài hát mới chờ duyệt",
         message: `${req.user.username} vừa upload "${title}" (${genre}) - cần phê duyệt`,
         data: {
-          songId:     song._id,
-          songTitle:  title,
+          songId:    song._id,
+          songTitle: title,
           artist,
           coverImage,
-          hasLRC:     !!lrc,
-          hasTags:    tags.length > 0,
+          hasLRC:    !!lrc,
+          hasTags:   tags.length > 0,
         },
       });
     } catch (notifErr) {
@@ -241,15 +263,23 @@ const createSong = async (req, res, next) => {
     res.status(201).json({
       success: true,
       message: "Upload thành công! Bài hát đang chờ Admin duyệt.",
-      data: populatedSong,
+      data:    populatedSong,
     });
   } catch (error) {
+    // ✅ Rollback: Xóa file đã upload lên Cloudinary nếu DB lỗi
+    console.error("❌ Lỗi createSong - rollback Cloudinary:", error.message);
+    await Promise.allSettled([
+      uploadedUrls.audio && deleteFromCloudinary(uploadedUrls.audio, "video"),
+      uploadedUrls.cover && deleteFromCloudinary(uploadedUrls.cover, "image"),
+      uploadedUrls.video && deleteFromCloudinary(uploadedUrls.video, "video"),
+    ]);
+
     next(error);
   }
 };
 
 /* ═══════════════════════════════════════════
-   USER: Lịch sử upload
+   USER: Lịch sử upload của tôi
 ═══════════════════════════════════════════ */
 const getMySongs = async (req, res, next) => {
   try {
@@ -264,8 +294,8 @@ const getMySongs = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      count: songs.length,
-      data: songs,
+      count:   songs.length,
+      data:    songs,
     });
   } catch (error) {
     next(error);
@@ -283,29 +313,30 @@ const getAllUploadsAdmin = async (req, res, next) => {
     const filter = {};
     if (status && status !== "all") filter.status = status;
 
-    const total = await Song.countDocuments(filter);
-    const songs = await Song.find(filter)
-      .populate("uploadedBy", "username avatar email")
-      .populate("reviewedBy", "username")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
-
-    const stats = await Song.aggregate([
-      { $group: { _id: "$status", count: { $sum: 1 } } },
+    const [total, songs, stats] = await Promise.all([
+      Song.countDocuments(filter),
+      Song.find(filter)
+        .populate("uploadedBy", "username avatar email")
+        .populate("reviewedBy", "username")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
+      Song.aggregate([
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+      ]),
     ]);
 
     const statsMap = { pending: 0, approved: 0, rejected: 0 };
     stats.forEach((s) => { statsMap[s._id] = s.count; });
 
     res.status(200).json({
-      success: true,
-      count: songs.length,
+      success:     true,
+      count:       songs.length,
       total,
-      totalPages: Math.ceil(total / parseInt(limit)),
+      totalPages:  Math.ceil(total / parseInt(limit)),
       currentPage: parseInt(page),
-      stats: statsMap,
-      data: songs,
+      stats:       statsMap,
+      data:        songs,
     });
   } catch (error) {
     next(error);
@@ -358,7 +389,7 @@ const approveSong = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: `Đã duyệt bài "${song.title}"`,
-      data: song,
+      data:    song,
     });
   } catch (error) {
     next(error);
@@ -370,8 +401,7 @@ const approveSong = async (req, res, next) => {
 ═══════════════════════════════════════════ */
 const rejectSong = async (req, res, next) => {
   try {
-    const { reason }   = req.body;
-    const rejectReason = reason || "Không đáp ứng tiêu chuẩn";
+    const rejectReason = req.body.reason || "Không đáp ứng tiêu chuẩn";
 
     const song = await Song.findByIdAndUpdate(
       req.params.id,
@@ -401,10 +431,10 @@ const rejectSong = async (req, res, next) => {
         title:     "❌ Bài hát bị từ chối",
         message:   `Bài hát "${song.title}" chưa được phê duyệt.`,
         data: {
-          songId:       song._id,
-          songTitle:    song.title,
-          artist:       song.artist,
-          coverImage:   song.coverImage,
+          songId:      song._id,
+          songTitle:   song.title,
+          artist:      song.artist,
+          coverImage:  song.coverImage,
           rejectReason,
         },
       });
@@ -415,7 +445,7 @@ const rejectSong = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: `Đã từ chối bài "${song.title}"`,
-      data: song,
+      data:    song,
     });
   } catch (error) {
     next(error);
@@ -426,8 +456,10 @@ const rejectSong = async (req, res, next) => {
    USER/ADMIN: Update bài hát
 ═══════════════════════════════════════════ */
 const updateSong = async (req, res, next) => {
+  const newUrls = { audio: null, cover: null, video: null };
+
   try {
-    let song = await Song.findById(req.params.id);
+    const song = await Song.findById(req.params.id);
     if (!song) {
       return res.status(404).json({
         success: false,
@@ -435,9 +467,9 @@ const updateSong = async (req, res, next) => {
       });
     }
 
-    // Cho phép update lyrics/lrc không cần check quyền chặt
+    /* ── Kiểm tra quyền ── */
     const allowedWithoutAuth = ["lyrics", "lrc"];
-    const onlyLyricsOrLRC = Object.keys(req.body).every((k) =>
+    const onlyLyricsOrLRC    = Object.keys(req.body).every((k) =>
       allowedWithoutAuth.includes(k)
     );
 
@@ -453,34 +485,38 @@ const updateSong = async (req, res, next) => {
       }
     }
 
-    const updateData = {};
+    /* ── Build updateData ── */
+    const updateData  = {};
+    const textFields  = ["title", "artist", "featuring", "album", "genre", "lyrics", "lrc"];
+    textFields.forEach((field) => {
+      if (req.body[field] !== undefined) updateData[field] = req.body[field];
+    });
 
-    // Text fields
-    if (req.body.title       !== undefined) updateData.title       = req.body.title;
-    if (req.body.artist      !== undefined) updateData.artist      = req.body.artist;
-    if (req.body.featuring   !== undefined) updateData.featuring   = req.body.featuring;
-    if (req.body.album       !== undefined) updateData.album       = req.body.album;
-    if (req.body.genre       !== undefined) updateData.genre       = req.body.genre;
-    if (req.body.lyrics      !== undefined) updateData.lyrics      = req.body.lyrics;
-    if (req.body.lrc         !== undefined) updateData.lrc         = req.body.lrc;
-
-    // Number fields
     if (req.body.releaseYear !== undefined) {
       updateData.releaseYear = parseInt(req.body.releaseYear);
     }
-
-    // Tags
     if (req.body.tags !== undefined) {
       updateData.tags = parseTags(req.body.tags);
     }
 
-    // Files
-    if (req.files?.cover?.[0]) updateData.coverImage = req.files.cover[0].filename;
-    if (req.files?.video?.[0]) updateData.videoFile  = req.files.video[0].filename;
+    /* ── File mới → xóa Cloudinary cũ ── */
+    if (req.files?.cover?.[0]) {
+      newUrls.cover         = getFileUrl(req.files.cover[0]);
+      await deleteFromCloudinary(song.coverImage, "image"); // ✅ Xóa ảnh cũ
+      updateData.coverImage = newUrls.cover;
+    }
+
+    if (req.files?.video?.[0]) {
+      newUrls.video         = getFileUrl(req.files.video[0]);
+      await deleteFromCloudinary(song.videoFile, "video");  // ✅ Xóa video cũ
+      updateData.videoFile  = newUrls.video;
+    }
 
     if (req.files?.audio?.[0]) {
-      updateData.audioFile = req.files.audio[0].filename;
-      updateData.duration  = await getAudioDuration(updateData.audioFile);
+      newUrls.audio         = getFileUrl(req.files.audio[0]);
+      await deleteFromCloudinary(song.audioFile, "video");  // ✅ Xóa nhạc cũ
+      updateData.audioFile  = newUrls.audio;
+      updateData.duration   = await getAudioDuration(newUrls.audio);
 
       if (req.user.role !== "admin") {
         updateData.status       = "pending";
@@ -495,10 +531,10 @@ const updateSong = async (req, res, next) => {
             title:   "🔄 Bài hát được cập nhật - chờ duyệt lại",
             message: `${req.user.username} đã cập nhật "${song.title}" - cần duyệt lại`,
             data: {
-              songId:     song._id,
-              songTitle:  song.title,
-              artist:     song.artist,
-              coverImage: song.coverImage,
+              songId:    song._id,
+              songTitle: song.title,
+              artist:    song.artist,
+              coverImage:song.coverImage,
             },
           });
         } catch (notifErr) {
@@ -507,23 +543,32 @@ const updateSong = async (req, res, next) => {
       }
     }
 
-    song = await Song.findByIdAndUpdate(req.params.id, updateData, {
-      new:            true,
-      runValidators:  true,
-    }).populate("uploadedBy", "username avatar");
+    const updatedSong = await Song.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate("uploadedBy", "username avatar");
 
     res.status(200).json({
       success: true,
       message: "Cập nhật thành công",
-      data: song,
+      data:    updatedSong,
     });
   } catch (error) {
+    // ✅ Rollback: Xóa file mới trên Cloudinary nếu DB lỗi
+    console.error("❌ Lỗi updateSong - rollback Cloudinary:", error.message);
+    await Promise.allSettled([
+      newUrls.audio && deleteFromCloudinary(newUrls.audio, "video"),
+      newUrls.cover && deleteFromCloudinary(newUrls.cover, "image"),
+      newUrls.video && deleteFromCloudinary(newUrls.video, "video"),
+    ]);
+
     next(error);
   }
 };
 
 /* ═══════════════════════════════════════════
-   USER/ADMIN: Xóa bài
+   USER/ADMIN: Xóa bài hát
 ═══════════════════════════════════════════ */
 const deleteSong = async (req, res, next) => {
   try {
@@ -545,15 +590,20 @@ const deleteSong = async (req, res, next) => {
       });
     }
 
-    await Song.findByIdAndDelete(req.params.id);
-    await User.updateMany(
-      { favorites: req.params.id },
-      { $pull: { favorites: req.params.id } }
-    );
-    await Playlist.updateMany(
-      { songs: req.params.id },
-      { $pull: { songs: req.params.id } }
-    );
+    // ✅ Xóa file trên Cloudinary + DB song song
+    await Promise.all([
+      deleteSongFromCloudinary(song),
+      Song.findByIdAndDelete(req.params.id),
+      User.updateMany(
+        { favorites: req.params.id },
+        { $pull: { favorites: req.params.id } }
+      ),
+      Playlist.updateMany(
+        { songs: req.params.id },
+        { $pull: { songs: req.params.id } }
+      ),
+      PlayHistory.deleteMany({ song: req.params.id }),
+    ]);
 
     res.status(200).json({
       success: true,
@@ -582,19 +632,17 @@ const playSong = async (req, res, next) => {
       });
     }
 
-    try {
-      await PlayHistory.create({
-        song:     req.params.id,
-        user:     req.user?._id || null,
-        playedAt: new Date(),
-      });
-    } catch (historyErr) {
-      console.error("⚠️ Lỗi lưu PlayHistory:", historyErr.message);
-    }
+    PlayHistory.create({
+      song:     req.params.id,
+      user:     req.user?._id || null,
+      playedAt: new Date(),
+    }).catch((err) => {
+      console.error("⚠️ Lỗi lưu PlayHistory:", err.message);
+    });
 
     res.status(200).json({
       success: true,
-      data: { playCount: song.playCount },
+      data:    { playCount: song.playCount },
     });
   } catch (error) {
     next(error);
@@ -602,13 +650,17 @@ const playSong = async (req, res, next) => {
 };
 
 /* ═══════════════════════════════════════════
-   USER: Like/Unlike
+   USER: Like / Unlike
 ═══════════════════════════════════════════ */
 const likeSong = async (req, res, next) => {
   try {
     const songId = req.params.id;
     const userId = req.user._id;
-    const song   = await Song.findById(songId);
+
+    const [song, user] = await Promise.all([
+      Song.findById(songId),
+      User.findById(userId).select("favorites"),
+    ]);
 
     if (!song) {
       return res.status(404).json({
@@ -617,37 +669,42 @@ const likeSong = async (req, res, next) => {
       });
     }
 
-    const user    = await User.findById(userId);
     const isLiked = user.favorites.includes(songId);
 
     if (isLiked) {
-      await User.findByIdAndUpdate(userId, { $pull:     { favorites: songId } });
-      await Song.findByIdAndUpdate(songId, { $inc:      { likeCount: -1 } });
-      res.status(200).json({
+      await Promise.all([
+        User.findByIdAndUpdate(userId, { $pull:     { favorites: songId } }),
+        Song.findByIdAndUpdate(songId, { $inc:      { likeCount: -1 } }),
+      ]);
+      return res.status(200).json({
         success: true,
         message: "Đã bỏ thích",
         data:    { isLiked: false },
       });
-    } else {
-      await User.findByIdAndUpdate(userId, { $addToSet: { favorites: songId } });
-      await Song.findByIdAndUpdate(songId, { $inc:      { likeCount: 1 } });
-      res.status(200).json({
-        success: true,
-        message: "Đã thích",
-        data:    { isLiked: true },
-      });
     }
+
+    await Promise.all([
+      User.findByIdAndUpdate(userId, { $addToSet: { favorites: songId } }),
+      Song.findByIdAndUpdate(songId, { $inc:      { likeCount: 1 } }),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      message: "Đã thích",
+      data:    { isLiked: true },
+    });
   } catch (error) {
     next(error);
   }
 };
 
 /* ═══════════════════════════════════════════
-   PUBLIC: Top songs
+   PUBLIC: Top bài hát
 ═══════════════════════════════════════════ */
 const getTopSongs = async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
+
     const songs = await Song.find({
       status:    "approved",
       isDeleted: { $ne: true },
@@ -658,17 +715,21 @@ const getTopSongs = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      count: songs.length,
-      data: songs,
+      count:   songs.length,
+      data:    songs,
     });
   } catch (error) {
     next(error);
   }
 };
 
+/* ═══════════════════════════════════════════
+   EXPORTS
+═══════════════════════════════════════════ */
 module.exports = {
   getSongs,
   getSong,
+  getSongFilterOptions,
   createSong,
   updateSong,
   deleteSong,
@@ -679,5 +740,4 @@ module.exports = {
   getAllUploadsAdmin,
   approveSong,
   rejectSong,
-  getSongFilterOptions,
 };

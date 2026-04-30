@@ -10,43 +10,32 @@ const NotificationContext = createContext();
 const POLL_INTERVAL       = 30_000;
 
 export const NotificationProvider = ({ children }) => {
-  const { isAuthenticated, user } = useAuth(); // 👈 thêm user
+  const { isAuthenticated, user } = useAuth(); 
 
   const [notifications, setNotifications] = useState([]);
   const [unreadCount,   setUnreadCount]   = useState(0);
   const [loading,       setLoading]       = useState(false);
   const timerRef = useRef(null);
-
-  /* ══════════════════════════════════════
-     👈 Reset ngay khi user thay đổi
-     (đăng xuất / đổi tài khoản)
-  ══════════════════════════════════════ */
   useEffect(() => {
-    // Clear data cũ ngay lập tức khi user thay đổi
     setNotifications([]);
     setUnreadCount(0);
     setLoading(false);
-  }, [user?._id]); // 👈 Theo dõi user._id, không phải isAuthenticated
+  }, [user?._id]); 
 
   /* ══════════════════════════════════════
      Fetch thông báo
   ══════════════════════════════════════ */
   const fetchNotifications = useCallback(async () => {
-    // ✅ Double check: phải có auth VÀ có user
     if (!isAuthenticated || !user?._id) return;
 
     setLoading(true);
     try {
       const result = await notificationAPI.getAll({ limit: 20 });
-
-      // ✅ Verify data trả về đúng user hiện tại
       console.log("📬 Fetch for user:", user.username, "| Got:", result?.notifications?.length);
-
       setNotifications(result?.notifications || []);
       setUnreadCount(result?.unreadCount     || 0);
     } catch (err) {
       console.error("❌ Fetch notifications error:", err);
-      // Nếu lỗi 401 → clear data
       if (err?.status === 401 || err?.statusCode === 401) {
         setNotifications([]);
         setUnreadCount(0);
@@ -54,7 +43,7 @@ export const NotificationProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, user?._id]); // 👈 Depend vào user._id
+  }, [isAuthenticated, user?._id]); //
 
   /* ══════════════════════════════════════
      Polling - reset khi user thay đổi
@@ -83,7 +72,7 @@ export const NotificationProvider = ({ children }) => {
         timerRef.current = null;
       }
     };
-  }, [isAuthenticated, user?._id]); // 👈 Quan trọng: depend vào user._id
+  }, [isAuthenticated, user?._id]); 
 
   /* ══════════════════════════════════════
      Actions

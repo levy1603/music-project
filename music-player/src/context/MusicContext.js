@@ -1,3 +1,4 @@
+// context/MusicContext.js
 import {
   createContext,
   useContext,

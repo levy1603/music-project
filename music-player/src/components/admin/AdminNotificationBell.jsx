@@ -52,16 +52,7 @@ const formatTime = (dateStr) => {
   return `${days} ngày trước`;
 };
 
-/* ══════════════════════════════════════════
-   Helper: Avatar theo type
-   new_upload    → Avatar tròn của USER upload
-   song_approved → Icon check xanh
-   song_rejected → Icon X đỏ
-   system        → Icon chuông
-══════════════════════════════════════════ */
 const AdminNotifAvatar = ({ noti, cfg }) => {
-
-  /* ── new_upload: Hiện avatar của user đã upload ── */
   if (noti.type === "new_upload") {
     const userAvatar = noti.sender?.avatar
       ? `http://localhost:5000${noti.sender.avatar}`
@@ -79,7 +70,6 @@ const AdminNotifAvatar = ({ noti, cfg }) => {
             }}
           />
         ) : (
-          /* Không có avatar → icon người */
           <div
             className="admin-noti-cover-placeholder"
             style={{ background: cfg.bg, color: cfg.color }}
@@ -87,13 +77,11 @@ const AdminNotifAvatar = ({ noti, cfg }) => {
             <FaUser />
           </div>
         )}
-        {/* Badge emoji type */}
         <span className="admin-noti-type-badge">{cfg.icon}</span>
       </div>
     );
   }
 
-  /* ── song_approved: Icon check xanh ── */
   if (noti.type === "song_approved") {
     return (
       <div className="admin-noti-cover">
@@ -108,7 +96,6 @@ const AdminNotifAvatar = ({ noti, cfg }) => {
     );
   }
 
-  /* ── song_rejected: Icon X đỏ ── */
   if (noti.type === "song_rejected") {
     return (
       <div className="admin-noti-cover">
@@ -123,7 +110,6 @@ const AdminNotifAvatar = ({ noti, cfg }) => {
     );
   }
 
-  /* ── system / default: Icon chuông ── */
   return (
     <div className="admin-noti-cover">
       <div

@@ -2,7 +2,6 @@ import axios from "axios";
 
 const BASE = "http://localhost:5000/api";
 
-// ✅ Lấy token đúng theo cách project bạn đang dùng
 const authHeader = () => ({
   headers: {
     Authorization: `Bearer ${localStorage.getItem("token")}`,

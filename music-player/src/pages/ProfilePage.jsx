@@ -1,60 +1,60 @@
+// pages/ProfilePage.jsx
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  FaUser,
-  FaEdit,
-  FaSave,
-  FaTimes,
-  FaCamera,
-  FaArrowLeft,
-  FaMusic,
-  FaHeart,
-  FaInfoCircle,
-  FaIdBadge,
-  FaSpinner,
-  FaCheck,
+  FaUser, FaEdit, FaSave, FaTimes, FaCamera,
+  FaArrowLeft, FaMusic, FaHeart, FaInfoCircle,
+  FaIdBadge, FaSpinner, FaCheck,
 } from "react-icons/fa";
-import { useAuth } from "../context/AuthContext";
-import userAPI from "../api/userAPI";
-import getAvatarURL from "../utils/getAvatarURL";
-import MySongsList from "../components/MySongsList";
+import { useAuth }      from "../context/AuthContext";
+import userAPI          from "../api/userAPI";
+import getAvatarURL     from "../utils/getAvatarURL";
+import MySongsList      from "../components/MySongsList";
 import "./ProfilePage.css";
 
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
-const DEFAULT_AVATAR = "https://i.pravatar.cc/150";
+const DEFAULT_AVATAR  = "https://i.pravatar.cc/150";
+
+const revokeAvatarPreview = (url) => {
+  if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+};
 
 const ProfilePage = () => {
-  const { user, updateUser, refreshUser } = useAuth();
-  const navigate = useNavigate();
+  const { user, updateUser } = useAuth(); 
+  const navigate       = useNavigate();
   const avatarInputRef = useRef(null);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [error, setError] = useState("");
-  const [avatarPreview, setAvatarPreview] = useState(null);
-  const [avatarFile, setAvatarFile] = useState(null);
-  const [showMySongs, setShowMySongs] = useState(false);
+  const [isEditing,    setIsEditing]    = useState(false);
+  const [saving,       setSaving]       = useState(false);
+  const [saveSuccess,  setSaveSuccess]  = useState(false);
+  const [error,        setError]        = useState("");
+  const [avatarPreview,  setAvatarPreview]  = useState(null);
+  const [avatarFile,     setAvatarFile]     = useState(null);
+  const [avatarCacheKey, setAvatarCacheKey] = useState(() => Date.now());
+  const [showMySongs,  setShowMySongs]  = useState(false);
+
   const [form, setForm] = useState({
     username: user?.username || "",
     nickname: user?.nickname || "",
-    bio: user?.bio || "",
+    bio:      user?.bio      || "",
   });
 
   useEffect(() => {
-    refreshUser();
-  }, [refreshUser]);
-
-  useEffect(() => {
     if (!user) return;
-
     setForm({
       username: user.username || "",
       nickname: user.nickname || "",
-      bio: user.bio || "",
+      bio:      user.bio      || "",
     });
   }, [user]);
 
+  useEffect(() => {
+    return () => revokeAvatarPreview(avatarPreview);
+  }, [avatarPreview]);
+
+  /* ═══════════════════════════════════════════
+     MEMO
+  ═══════════════════════════════════════════ */
   const favoriteCount = useMemo(
     () => user?.favoriteCount ?? user?.favorites?.length ?? 0,
     [user]
@@ -62,29 +62,36 @@ const ProfilePage = () => {
 
   const uploadCount = useMemo(() => user?.uploadCount ?? 0, [user]);
 
-  const currentAvatar = useMemo(
-    () => avatarPreview || getAvatarURL(user?.avatar, 150),
-    [avatarPreview, user?.avatar]
-  );
-
   const joinedDate = useMemo(() => {
     if (!user?.createdAt) return "Không rõ";
     return new Date(user.createdAt).toLocaleDateString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
+      day: "2-digit", month: "2-digit", year: "numeric",
     });
   }, [user?.createdAt]);
 
+  const currentAvatar = useMemo(() => {
+    if (avatarPreview) return avatarPreview;
+
+    const baseUrl = getAvatarURL(user?.avatar, 150);
+    if (!baseUrl) return DEFAULT_AVATAR;
+
+    const sep = baseUrl.includes("?") ? "&" : "?";
+    return `${baseUrl}${sep}t=${avatarCacheKey}`;
+  }, [avatarPreview, user?.avatar, avatarCacheKey]);
+
+  /* ═══════════════════════════════════════════
+     HANDLERS
+  ═══════════════════════════════════════════ */
   const resetForm = useCallback(() => {
     setForm({
       username: user?.username || "",
       nickname: user?.nickname || "",
-      bio: user?.bio || "",
+      bio:      user?.bio      || "",
     });
-    setAvatarPreview(null);
+    setAvatarPreview((prev) => { revokeAvatarPreview(prev); return null; });
     setAvatarFile(null);
     setError("");
+    if (avatarInputRef.current) avatarInputRef.current.value = "";
   }, [user]);
 
   const handleChange = useCallback((e) => {
@@ -98,21 +105,17 @@ const ProfilePage = () => {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      setError("Vui lòng chọn file ảnh!");
-      return;
+      setError("Vui lòng chọn file ảnh!"); return;
     }
-
     if (file.size > MAX_AVATAR_SIZE) {
-      setError("Ảnh không được vượt quá 5MB!");
-      return;
+      setError("Ảnh không được vượt quá 5MB!"); return;
     }
 
     setAvatarFile(file);
     setError("");
 
-    const reader = new FileReader();
-    reader.onload = (event) => setAvatarPreview(event.target?.result);
-    reader.readAsDataURL(file);
+    const previewUrl = URL.createObjectURL(file);
+    setAvatarPreview((prev) => { revokeAvatarPreview(prev); return previewUrl; });
   }, []);
 
   const handleSave = useCallback(async () => {
@@ -125,37 +128,45 @@ const ProfilePage = () => {
     setError("");
 
     try {
-      let updatedUser = { ...user };
+      let newAvatarUrl = null;
 
       if (avatarFile) {
         const formData = new FormData();
         formData.append("avatar", avatarFile);
 
-        const avatarRes = await userAPI.updateAvatar(formData);
-        const avatarPath = avatarRes.data?.data?.avatar || avatarRes.data?.avatar;
+        const avatarRes  = await userAPI.updateAvatar(formData);
+        const avatarData = avatarRes.data?.data;
 
-        if (avatarPath) {
-          updatedUser.avatar = avatarPath;
-        }
+        newAvatarUrl = avatarData?.avatar
+                    || avatarData?.user?.avatar
+                    || null;
+
+        console.log("✅ Cloudinary URL:", newAvatarUrl);
       }
 
-      const profileRes = await userAPI.updateProfile({
+      const profileRes  = await userAPI.updateProfile({
         username: form.username.trim(),
         nickname: form.nickname.trim(),
-        bio: form.bio.trim(),
+        bio:      form.bio.trim(),
+      });
+      const profileData = profileRes.data?.data || profileRes.data;
+
+      updateUser({
+        ...profileData,
+
+        ...(newAvatarUrl ? { avatar: newAvatarUrl } : {}),
       });
 
-      const profileData = profileRes.data?.data || profileRes.data;
-      updatedUser = { ...updatedUser, ...profileData };
-
-      updateUser(updatedUser);
       setAvatarFile(null);
-      setAvatarPreview(null);
+      setAvatarPreview((prev) => { revokeAvatarPreview(prev); return null; });
+      setAvatarCacheKey(Date.now());
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
       setIsEditing(false);
       setSaveSuccess(true);
-
       setTimeout(() => setSaveSuccess(false), 3000);
+
     } catch (err) {
+      console.error("❌ Lỗi cập nhật:", err);
       setError(err.response?.data?.message || "Lỗi khi cập nhật thông tin!");
     } finally {
       setSaving(false);
@@ -167,25 +178,24 @@ const ProfilePage = () => {
     setIsEditing(false);
   }, [resetForm]);
 
+  /* ═══════════════════════════════════════════
+     RENDER
+  ═══════════════════════════════════════════ */
   return (
     <div className="profile-page">
-      {/* Nút quay lại */}
       <button className="profile-back-btn" onClick={() => navigate(-1)}>
-        <FaArrowLeft />
-        <span>Quay lại</span>
+        <FaArrowLeft /><span>Quay lại</span>
       </button>
 
       <div className="profile-container">
-        {/* Cột trái */}
+        {/* ── Cột trái ── */}
         <div className="profile-left">
           <div className="avatar-wrapper">
             <img
               src={currentAvatar}
               alt="avatar"
               className="profile-avatar"
-              onError={(e) => {
-                e.target.src = DEFAULT_AVATAR;
-              }}
+              onError={(e) => { e.target.src = DEFAULT_AVATAR; }}
             />
 
             {isEditing && (
@@ -194,8 +204,7 @@ const ProfilePage = () => {
                 onClick={() => avatarInputRef.current?.click()}
                 title="Thay đổi ảnh"
               >
-                <FaCamera />
-                <span>Đổi ảnh</span>
+                <FaCamera /><span>Đổi ảnh</span>
               </button>
             )}
 
@@ -206,12 +215,10 @@ const ProfilePage = () => {
               style={{ display: "none" }}
               onChange={handleAvatarChange}
             />
-
             <div className="avatar-badge" />
           </div>
 
           <h2 className="profile-display-name">{user?.username}</h2>
-
           {user?.nickname && <p className="profile-nickname">@{user.nickname}</p>}
 
           <div className="profile-stats">
@@ -239,11 +246,10 @@ const ProfilePage = () => {
           )}
         </div>
 
-        {/* Cột phải */}
+        {/* ── Cột phải ── */}
         <div className="profile-right">
           <div className="profile-right-header">
             <h3>{isEditing ? "✏️ Chỉnh sửa hồ sơ" : "👤 Thông tin cá nhân"}</h3>
-
             {saveSuccess && (
               <div className="save-success-badge">
                 <FaCheck /> Đã lưu!
@@ -252,26 +258,18 @@ const ProfilePage = () => {
           </div>
 
           {error && (
-            <div className="profile-error">
-              <FaTimes /> {error}
-            </div>
+            <div className="profile-error"><FaTimes /> {error}</div>
           )}
 
           <div className="profile-form">
+            {/* Username */}
             <div className="form-group">
-              <label>
-                <FaUser className="label-icon" />
-                Tên người dùng
-              </label>
+              <label><FaUser className="label-icon" />Tên người dùng</label>
               {isEditing ? (
                 <input
-                  type="text"
-                  name="username"
-                  value={form.username}
-                  onChange={handleChange}
-                  className="profile-input"
-                  placeholder="Nhập tên người dùng..."
-                  maxLength={30}
+                  type="text" name="username" value={form.username}
+                  onChange={handleChange} className="profile-input"
+                  placeholder="Nhập tên người dùng..." maxLength={30}
                 />
               ) : (
                 <div className="profile-value">
@@ -280,61 +278,46 @@ const ProfilePage = () => {
               )}
             </div>
 
+            {/* Nickname */}
             <div className="form-group">
-              <label>
-                <FaIdBadge className="label-icon" />
-                Biệt danh
-              </label>
+              <label><FaIdBadge className="label-icon" />Biệt danh</label>
               {isEditing ? (
                 <div className="input-with-prefix">
                   <span className="input-prefix">@</span>
                   <input
-                    type="text"
-                    name="nickname"
-                    value={form.nickname}
-                    onChange={handleChange}
-                    className="profile-input has-prefix"
-                    placeholder="Nhập biệt danh..."
-                    maxLength={30}
+                    type="text" name="nickname" value={form.nickname}
+                    onChange={handleChange} className="profile-input has-prefix"
+                    placeholder="Nhập biệt danh..." maxLength={30}
                   />
                 </div>
               ) : (
                 <div className="profile-value">
-                  {user?.nickname ? (
-                    `@${user.nickname}`
-                  ) : (
-                    <span className="empty-value">Chưa cập nhật</span>
-                  )}
+                  {user?.nickname
+                    ? `@${user.nickname}`
+                    : <span className="empty-value">Chưa cập nhật</span>}
                 </div>
               )}
             </div>
 
+            {/* Email */}
             <div className="form-group">
-              <label>
-                <FaInfoCircle className="label-icon" />
-                Email
-              </label>
+              <label><FaInfoCircle className="label-icon" />Email</label>
               <div className="profile-value readonly">
                 {user?.email}
                 <span className="readonly-badge">Không thể thay đổi</span>
               </div>
             </div>
 
+            {/* Bio */}
             <div className="form-group">
-              <label>
-                <FaInfoCircle className="label-icon" />
-                Mô tả bản thân
-              </label>
+              <label><FaInfoCircle className="label-icon" />Mô tả bản thân</label>
               {isEditing ? (
                 <>
                   <textarea
-                    name="bio"
-                    value={form.bio}
-                    onChange={handleChange}
+                    name="bio" value={form.bio} onChange={handleChange}
                     className="profile-textarea"
                     placeholder="Viết gì đó về bản thân bạn..."
-                    rows={4}
-                    maxLength={200}
+                    rows={4} maxLength={200}
                   />
                   <span className="char-count">{form.bio.length}/200</span>
                 </>
@@ -349,11 +332,9 @@ const ProfilePage = () => {
               )}
             </div>
 
+            {/* Ngày tham gia */}
             <div className="form-group">
-              <label>
-                <FaInfoCircle className="label-icon" />
-                Ngày tham gia
-              </label>
+              <label><FaInfoCircle className="label-icon" />Ngày tham gia</label>
               <div className="profile-value readonly">{joinedDate}</div>
             </div>
           </div>
@@ -363,24 +344,17 @@ const ProfilePage = () => {
               <button className="cancel-btn" onClick={handleCancel} disabled={saving}>
                 <FaTimes /> Hủy
               </button>
-
               <button className="save-btn" onClick={handleSave} disabled={saving}>
-                {saving ? (
-                  <>
-                    <FaSpinner className="spinning" /> Đang lưu...
-                  </>
-                ) : (
-                  <>
-                    <FaSave /> Lưu thay đổi
-                  </>
-                )}
+                {saving
+                  ? <><FaSpinner className="spinning" /> Đang lưu...</>
+                  : <><FaSave /> Lưu thay đổi</>
+                }
               </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Danh sách bài đã upload */}
       {showMySongs && <MySongsList onClose={() => setShowMySongs(false)} />}
     </div>
   );

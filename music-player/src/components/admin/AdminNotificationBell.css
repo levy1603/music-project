@@ -50,7 +50,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #0f172a; /* match admin bg */
+  border: 2px solid #0f172a; 
   animation: badge-pop 0.3s cubic-bezier(0.34,1.56,0.64,1);
 }
 
@@ -59,7 +59,6 @@
   100% { transform: scale(1); }
 }
 
-/* Pulse dot nhấp nháy (upload mới) */
 .admin-notif-pulse {
   position: absolute;
   top: -3px;
@@ -461,9 +460,7 @@
   to   { transform: rotate(360deg); }
 }
 
-/* Thêm vào AdminNotificationBell.css */
-
-/* Avatar tròn cho user upload */
+/* Avatar */
 .admin-noti-user-avatar {
   border-radius: 50% !important;
   border: 2px solid rgba(251, 191, 36, 0.4) !important;

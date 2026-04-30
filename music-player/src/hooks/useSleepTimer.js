@@ -9,9 +9,7 @@ const useSleepTimer = (onStop) => {
 
   const intervalRef = useRef(null);
   const endTimeRef  = useRef(null);
-  const onStopRef   = useRef(onStop); // ✅ Dùng ref để tránh stale closure
-
-  // ✅ Cập nhật ref mỗi khi onStop thay đổi
+  const onStopRef   = useRef(onStop); 
   useEffect(() => {
     onStopRef.current = onStop;
   }, [onStop]);
@@ -45,12 +43,11 @@ const useSleepTimer = (onStop) => {
       const remaining = Math.round((endTimeRef.current - Date.now()) / 1000);
 
       if (remaining <= 0) {
-        // ✅ Dùng ref thay vì closure để luôn gọi hàm mới nhất
         clearInterval(intervalRef.current);
         intervalRef.current = null;
         setTimerActive(false);
         setTimeRemaining(0);
-        onStopRef.current?.(); // ← Gọi qua ref, không bị stale
+        onStopRef.current?.();
       } else {
         setTimeRemaining(remaining);
       }

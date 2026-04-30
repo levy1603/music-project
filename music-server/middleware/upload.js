@@ -1,87 +1,74 @@
 // middleware/upload.js
 const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
+const {
+  audioStorage,
+  coverStorage,
+  videoStorage,
+  avatarStorage, // ✅ Thêm
+} = require("../config/cloudinary");
 
-// Tạo thư mục nếu chưa có
-const createDir = (dir) => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+/* ── File Filter ── */
+const ALLOWED_TYPES = {
+  audio:  ["audio/mpeg", "audio/wav", "audio/flac", "audio/mp3", "audio/ogg"],
+  cover:  ["image/jpeg", "image/png", "image/webp"],
+  video:  ["video/mp4", "video/webm", "video/ogg", "video/quicktime", "video/x-msvideo"],
+  avatar: ["image/jpeg", "image/png", "image/webp"],
 };
 
-createDir("uploads/songs");
-createDir("uploads/covers");
-createDir("uploads/videos"); // ✅ THÊM MỚI
+const FILE_ERRORS = {
+  audio:  "Chỉ chấp nhận file nhạc (MP3, WAV, FLAC, OGG)",
+  cover:  "Chỉ chấp nhận file ảnh (JPG, PNG, WEBP)",
+  video:  "Chỉ chấp nhận file video (MP4, WEBM, OGG, MOV, AVI)",
+  avatar: "Chỉ chấp nhận file ảnh (JPG, PNG, WEBP)",
+};
 
-// ===== STORAGE =====
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    if (file.fieldname === "audio") {
-      cb(null, "uploads/songs/");
-    } else if (file.fieldname === "cover") {
-      cb(null, "uploads/covers/");
-    } else if (file.fieldname === "video") {
-      cb(null, "uploads/videos/"); // ✅ THÊM MỚI
-    }
-  },
-  filename: (req, file, cb) => {
-    const prefix =
-      file.fieldname === "audio" ? "song"
-      : file.fieldname === "cover" ? "cover"
-      : "video"; // ✅ THÊM MỚI
-    const uniqueName = `${prefix}-${Date.now()}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
-  },
-});
-
-// ===== FILE FILTER =====
 const fileFilter = (req, file, cb) => {
-  // Audio
-  if (file.fieldname === "audio") {
-    const allowed = ["audio/mpeg", "audio/wav", "audio/flac", "audio/mp3", "audio/ogg"];
-    if (allowed.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Chỉ chấp nhận file nhạc (MP3, WAV, FLAC, OGG)"), false);
-    }
-  }
-  // Cover
-  else if (file.fieldname === "cover") {
-    const allowed = ["image/jpeg", "image/png", "image/webp"];
-    if (allowed.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Chỉ chấp nhận file ảnh (JPG, PNG, WEBP)"), false);
-    }
-  }
-  // ✅ Video
-  else if (file.fieldname === "video") {
-    const allowed = [
-      "video/mp4",
-      "video/webm",
-      "video/ogg",
-      "video/quicktime",
-      "video/x-msvideo",
-    ];
-    if (allowed.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Chỉ chấp nhận file video (MP4, WEBM, OGG, MOV, AVI)"), false);
-    }
-  }
-  else {
-    cb(new Error("File không hợp lệ"), false);
+  const allowed = ALLOWED_TYPES[file.fieldname];
+  if (!allowed) return cb(new Error("Field không hợp lệ"), false);
+
+  if (allowed.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error(FILE_ERRORS[file.fieldname]), false);
   }
 };
 
-// ===== UPLOAD CONFIG =====
+// Avatar filter riêng (single field)
+const avatarFilter = (req, file, cb) => {
+  const allowed = ["image/jpeg", "image/png", "image/webp"];
+  if (allowed.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Chỉ chấp nhận file ảnh (JPG, PNG, WEBP)"), false);
+  }
+};
+
+/* ── Upload song files ── */
 const uploadSongFiles = multer({
-  storage,
-  fileFilter,
-  limits: {
-    fileSize: 200 * 1024 * 1024, // ✅ Tăng lên 200MB cho video
+  storage: {
+    _handleFile(req, file, cb) {
+      if      (file.fieldname === "audio") audioStorage._handleFile(req, file, cb);
+      else if (file.fieldname === "cover") coverStorage._handleFile(req, file, cb);
+      else if (file.fieldname === "video") videoStorage._handleFile(req, file, cb);
+      else cb(new Error("Field không hợp lệ"));
+    },
+    _removeFile(req, file, cb) {
+      if (file.fieldname === "audio" || file.fieldname === "video") {
+        audioStorage._removeFile(req, file, cb);
+      } else {
+        coverStorage._removeFile(req, file, cb);
+      }
+    },
   },
+  fileFilter,
+  limits: { fileSize: 200 * 1024 * 1024 },
 });
 
-module.exports = { uploadSongFiles };
+/* ── Upload avatar ── */
+const uploadAvatar = multer({
+  storage:    avatarStorage,
+  fileFilter: avatarFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+});
+
+module.exports = { uploadSongFiles, uploadAvatar };

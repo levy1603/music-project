@@ -1,6 +1,6 @@
 /* src/pages/admin/AdminPage.css */
 
-/* Reset toàn bộ để Admin không bị ảnh hưởng bởi CSS của User */
+
 .admin-layout * {
   box-sizing: border-box;
 }

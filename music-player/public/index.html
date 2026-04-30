@@ -2,21 +2,259 @@
 <html lang="vi">
   <head>
     <meta charset="utf-8" />
-
-    <!-- ✅ Đổi favicon thành ảnh của bạn -->
     <link rel="icon" href="%PUBLIC_URL%/barbara-genshin-impact.gif" />
-
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#1db954" />
+    <meta name="theme-color" content="#6366f1" />
     <meta name="description" content="Nghe nhạc trực tuyến miễn phí - ChillWithF" />
-    
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo.gif" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-
-    <!-- ✅ Đổi title tab -->
     <title>ChillWithF 🎵</title>
+
+    <style>
+      /* Import Inter font sớm để splash dùng luôn */
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap");
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      /* ── Nền tối ngay lập tức, không bị flash trắng ── */
+      html, body {
+        background: #0b1020;
+        height: 100%;
+      }
+
+      /* ═══════════════════════════════════════
+         SPLASH SCREEN
+      ═══════════════════════════════════════ */
+      #splash-screen {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+
+        background: #0b1020;
+        background-image:
+          radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.18) 0%, transparent 60%),
+          radial-gradient(ellipse at 80% 80%, rgba(6, 182, 212, 0.14) 0%, transparent 60%);
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 0.6s ease, visibility 0.6s ease;
+      }
+
+      #splash-screen.splash-hiding {
+        opacity: 0;
+        visibility: hidden;
+      }
+
+      /* ── Logo ── */
+      .splash-logo {
+        width: 110px;
+        height: 110px;
+        border-radius: 50%;
+        object-fit: cover;
+        box-shadow:
+          0 0 0 2px rgba(99, 102, 241, 0.6),
+          0 0 40px rgba(99, 102, 241, 0.3),
+          0 0 80px rgba(6, 182, 212, 0.15);
+        animation: splashLogoGlow 2.5s ease-in-out infinite;
+        margin-bottom: 28px;
+      }
+
+      /* ── Tên app ── */
+      .splash-title {
+        font-family: "Inter", sans-serif;
+        font-size: 36px;
+        font-weight: 800;
+        letter-spacing: 6px;
+        color: #ffffff;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+
+      .splash-title-accent {
+        background: linear-gradient(90deg, #6366f1, #06b6d4);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .splash-subtitle {
+        font-family: "Inter", sans-serif;
+        font-size: 13px;
+        font-weight: 400;
+        color: #94a3b8;
+        letter-spacing: 1.5px;
+        margin-bottom: 52px;
+      }
+
+      /* ── Card glassmorphism ── */
+      .splash-wave-card {
+        padding: 20px 32px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 32px;
+      }
+
+      /* ── Sóng nhạc ── */
+      .splash-waves {
+        display: flex;
+        align-items: flex-end;
+        gap: 5px;
+        height: 48px;
+      }
+
+      .splash-wave-bar {
+        width: 6px;
+        border-radius: 3px;
+        background: linear-gradient(to top, #6366f1, #06b6d4);
+        box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+        animation: splashWave 1.3s ease-in-out infinite;
+      }
+
+      .splash-wave-bar:nth-child(1) { height: 18px; animation-delay: 0.0s; }
+      .splash-wave-bar:nth-child(2) { height: 32px; animation-delay: 0.2s; }
+      .splash-wave-bar:nth-child(3) { height: 48px; animation-delay: 0.4s; }
+      .splash-wave-bar:nth-child(4) { height: 26px; animation-delay: 0.6s; }
+      .splash-wave-bar:nth-child(5) { height: 42px; animation-delay: 0.8s; }
+      .splash-wave-bar:nth-child(6) { height: 30px; animation-delay: 1.0s; }
+      .splash-wave-bar:nth-child(7) { height: 16px; animation-delay: 0.3s; }
+
+      .splash-wave-label {
+        font-family: "Inter", sans-serif;
+        font-size: 11px;
+        font-weight: 500;
+        color: #94a3b8;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+      }
+
+      /* ── Progress bar ── */
+      .splash-progress-wrap {
+        width: 200px;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+        overflow: hidden;
+        margin-bottom: 12px;
+      }
+
+      .splash-progress-bar {
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #6366f1, #06b6d4);
+        box-shadow: 0 0 10px rgba(99, 102, 241, 0.6);
+        animation: splashProgress 2s ease-in-out infinite;
+      }
+
+      /* ── Loading text ── */
+      .splash-loading-text {
+        font-family: "Inter", sans-serif;
+        font-size: 12px;
+        font-weight: 400;
+        color: #475569;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        animation: splashBlink 2s ease-in-out infinite;
+      }
+
+      /* ═══════════════════════════════════════
+         ANIMATIONS
+      ═══════════════════════════════════════ */
+      @keyframes splashLogoGlow {
+        0%, 100% {
+          box-shadow:
+            0 0 0 2px rgba(99, 102, 241, 0.5),
+            0 0 30px rgba(99, 102, 241, 0.25),
+            0 0 60px rgba(6, 182, 212, 0.1);
+        }
+        50% {
+          box-shadow:
+            0 0 0 2px rgba(6, 182, 212, 0.7),
+            0 0 50px rgba(99, 102, 241, 0.5),
+            0 0 100px rgba(6, 182, 212, 0.25);
+        }
+      }
+
+      @keyframes splashWave {
+        0%, 100% {
+          transform: scaleY(0.3);
+          opacity: 0.4;
+        }
+        50% {
+          transform: scaleY(1);
+          opacity: 1;
+        }
+      }
+
+      @keyframes splashProgress {
+        0%   { width: 0%;  margin-left: 0; }
+        50%  { width: 70%; margin-left: 15%; }
+        100% { width: 0%;  margin-left: 100%; }
+      }
+
+      @keyframes splashBlink {
+        0%, 100% { opacity: 1; }
+        50%       { opacity: 0.25; }
+      }
+    </style>
   </head>
+
   <body>
+    <!-- ═══════════════════════════════════════
+         SPLASH SCREEN
+    ═══════════════════════════════════════ -->
+    <div id="splash-screen">
+
+      <img
+        class="splash-logo"
+        src="%PUBLIC_URL%/barbara-genshin-impact.gif"
+        alt="ChillWithF Logo"
+      />
+
+      <div class="splash-title">
+        Chill<span class="splash-title-accent">WithF</span>
+      </div>
+      <div class="splash-subtitle">Nghe nhạc trực tuyến miễn phí 🎵</div>
+
+      <div class="splash-wave-card">
+        <div class="splash-waves">
+          <div class="splash-wave-bar"></div>
+          <div class="splash-wave-bar"></div>
+          <div class="splash-wave-bar"></div>
+          <div class="splash-wave-bar"></div>
+          <div class="splash-wave-bar"></div>
+          <div class="splash-wave-bar"></div>
+          <div class="splash-wave-bar"></div>
+        </div>
+        <div class="splash-wave-label">Now Loading</div>
+      </div>
+
+      <div class="splash-progress-wrap">
+        <div class="splash-progress-bar"></div>
+      </div>
+
+      <div class="splash-loading-text">Đang khởi động...</div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         REACT APP
+    ═══════════════════════════════════════ -->
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
   </body>

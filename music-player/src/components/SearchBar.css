@@ -420,7 +420,6 @@
     color 0.2s ease;
 }
 
-/* Khi hover vào wrapper hoặc search bar thì icon filter hiện ra */
 .search-bar-wrapper:hover .search-filter-toggle,
 .search-bar:hover .search-filter-toggle,
 .search-bar.panel-open .search-filter-toggle,

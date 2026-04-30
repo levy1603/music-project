@@ -2,40 +2,46 @@
 const User        = require("../models/User");
 const Song        = require("../models/Song");
 const Playlist    = require("../models/Playlist");
-const PlayHistory = require("../models/PlayHistory"); // 👈 THÊM
-const path        = require("path");
-const fs          = require("fs");
+const PlayHistory = require("../models/PlayHistory");
+const {
+  deleteFromCloudinary,
+} = require("../config/cloudinary");
 
 /* ═══════════════════════════════════════════
-   Giữ nguyên các function cũ
-   getFavorites, updateProfile, updateAvatar,
-   getAllUsers, deleteUser, updateUserRole, toggleBanUser
+   GET FAVORITES
 ═══════════════════════════════════════════ */
-
 const getFavorites = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id).populate({
-      path: "favorites",
-      match: { status: "approved", isDeleted: { $ne: true } },
+      path:    "favorites",
+      match:   { status: "approved", isDeleted: { $ne: true } },
       populate: { path: "uploadedBy", select: "username avatar" },
     });
+
     res.status(200).json({
       success: true,
-      count: user.favorites.length,
-      data:  user.favorites,
+      count:   user.favorites.length,
+      data:    user.favorites,
     });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
+/* ═══════════════════════════════════════════
+   UPDATE PROFILE
+═══════════════════════════════════════════ */
 const updateProfile = async (req, res, next) => {
   try {
     const { username, nickname, bio } = req.body;
+
     if (!username || !username.trim()) {
       return res.status(400).json({
         success: false,
         message: "Tên người dùng không được để trống!",
       });
     }
+
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
       {
@@ -46,7 +52,10 @@ const updateProfile = async (req, res, next) => {
       { new: true, runValidators: true }
     ).select("-password");
 
-    const uploadCount   = await Song.countDocuments({ uploadedBy: req.user._id });
+    const [uploadCount] = await Promise.all([
+      Song.countDocuments({ uploadedBy: req.user._id }),
+    ]);
+
     const favoriteCount = updatedUser.favorites?.length || 0;
 
     res.status(200).json({
@@ -54,34 +63,71 @@ const updateProfile = async (req, res, next) => {
       message: "Cập nhật thông tin thành công!",
       data:    { ...updatedUser.toObject(), uploadCount, favoriteCount },
     });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
+/* ═══════════════════════════════════════════
+   UPDATE AVATAR - Cloudinary
+═══════════════════════════════════════════ */
 const updateAvatar = async (req, res, next) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, message: "Vui lòng chọn ảnh!" });
+      return res.status(400).json({
+        success: false,
+        message: "Vui lòng chọn ảnh!",
+      });
     }
+
+    // ✅ Lấy URL từ Cloudinary (multer-storage-cloudinary lưu vào file.path)
+    const newAvatarUrl = req.file.path;
+
+    // ✅ Xóa avatar cũ trên Cloudinary nếu có
     const currentUser = await User.findById(req.user._id);
-    if (currentUser.avatar && currentUser.avatar.startsWith("/uploads/avatars/")) {
-      const oldPath = path.join(__dirname, "..", currentUser.avatar);
-      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+
+    if (currentUser.avatar) {
+      const isCloudinaryUrl = currentUser.avatar.includes("cloudinary.com");
+      const isLocalUrl      = currentUser.avatar.startsWith("/uploads/avatars/");
+
+      if (isCloudinaryUrl) {
+        // Xóa avatar cũ trên Cloudinary
+        await deleteFromCloudinary(currentUser.avatar, "image");
+      } else if (isLocalUrl) {
+        // ✅ Tương thích ngược: Xóa file local cũ nếu còn tồn tại
+        const path = require("path");
+        const fs   = require("fs");
+        const oldPath = path.join(__dirname, "..", currentUser.avatar);
+        if (fs.existsSync(oldPath)) {
+          fs.unlinkSync(oldPath);
+          console.log(`🗑️  Đã xóa avatar local cũ: ${oldPath}`);
+        }
+      }
     }
-    const avatarPath  = `/uploads/avatars/${req.file.filename}`;
+
+    // ✅ Lưu URL Cloudinary vào DB
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
-      { avatar: avatarPath },
+      { avatar: newAvatarUrl },
       { new: true }
     ).select("-password");
 
     res.status(200).json({
       success: true,
       message: "Cập nhật avatar thành công!",
-      data:    { avatar: avatarPath, user: updatedUser },
+      data: {
+        avatar: newAvatarUrl,
+        user:   updatedUser,
+      },
     });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
+/* ═══════════════════════════════════════════
+   GET ALL USERS (Admin)
+═══════════════════════════════════════════ */
 const getAllUsers = async (req, res, next) => {
   try {
     const users = await User.find()
@@ -94,39 +140,96 @@ const getAllUsers = async (req, res, next) => {
         return { ...user.toObject(), uploadCount };
       })
     );
+
     res.status(200).json({
       success: true,
       count:   users.length,
       data:    usersWithCount,
     });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
+/* ═══════════════════════════════════════════
+   DELETE USER (Admin)
+═══════════════════════════════════════════ */
 const deleteUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) {
-      return res.status(404).json({ success: false, message: "Không tìm thấy người dùng" });
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng",
+      });
     }
+
     if (user.role === "admin") {
-      return res.status(403).json({ success: false, message: "Không thể xóa tài khoản Admin!" });
+      return res.status(403).json({
+        success: false,
+        message: "Không thể xóa tài khoản Admin!",
+      });
     }
-    await Song.deleteMany({ uploadedBy: req.params.id });
-    await Playlist.deleteMany({ owner: req.params.id });
-    await User.findByIdAndDelete(req.params.id);
-    res.status(200).json({ success: true, message: "Xóa người dùng thành công" });
-  } catch (error) { next(error); }
+
+    // ✅ Xóa avatar trên Cloudinary nếu có
+    if (user.avatar) {
+      if (user.avatar.includes("cloudinary.com")) {
+        await deleteFromCloudinary(user.avatar, "image");
+      } else if (user.avatar.startsWith("/uploads/avatars/")) {
+        // Tương thích ngược với avatar local cũ
+        const path = require("path");
+        const fs   = require("fs");
+        const oldPath = path.join(__dirname, "..", user.avatar);
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
+    }
+
+    // ✅ Xóa song files trên Cloudinary
+    const userSongs = await Song.find({ uploadedBy: req.params.id });
+    const { deleteSongFromCloudinary } = require("../config/cloudinary");
+
+    await Promise.all(
+      userSongs.map((song) => deleteSongFromCloudinary(song))
+    );
+
+    // ✅ Xóa tất cả dữ liệu liên quan song song
+    await Promise.all([
+      Song.deleteMany({ uploadedBy: req.params.id }),
+      Playlist.deleteMany({ owner: req.params.id }),
+      PlayHistory.deleteMany({ user: req.params.id }),
+      User.findByIdAndDelete(req.params.id),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      message: "Xóa người dùng thành công",
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
+/* ═══════════════════════════════════════════
+   UPDATE USER ROLE (Admin)
+═══════════════════════════════════════════ */
 const updateUserRole = async (req, res, next) => {
   try {
     const { role } = req.body;
+
     if (!["user", "admin"].includes(role)) {
-      return res.status(400).json({ success: false, message: "Role không hợp lệ" });
+      return res.status(400).json({
+        success: false,
+        message: "Role không hợp lệ",
+      });
     }
+
     if (req.params.id === req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: "Không thể đổi role của chính mình!" });
+      return res.status(403).json({
+        success: false,
+        message: "Không thể đổi role của chính mình!",
+      });
     }
+
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { role },
@@ -134,25 +237,42 @@ const updateUserRole = async (req, res, next) => {
     ).select("-password");
 
     if (!user) {
-      return res.status(404).json({ success: false, message: "Không tìm thấy người dùng" });
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng",
+      });
     }
+
     res.status(200).json({
       success: true,
       message: `Đã ${role === "admin" ? "cấp" : "thu hồi"} quyền Admin`,
       data:    user,
     });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
+/* ═══════════════════════════════════════════
+   TOGGLE BAN USER (Admin)
+═══════════════════════════════════════════ */
 const toggleBanUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) {
-      return res.status(404).json({ success: false, message: "Không tìm thấy người dùng" });
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng",
+      });
     }
+
     if (user.role === "admin") {
-      return res.status(403).json({ success: false, message: "Không thể khóa tài khoản Admin!" });
+      return res.status(403).json({
+        success: false,
+        message: "Không thể khóa tài khoản Admin!",
+      });
     }
+
     const updatedUser = await User.findByIdAndUpdate(
       req.params.id,
       { isBanned: !user.isBanned },
@@ -160,68 +280,71 @@ const toggleBanUser = async (req, res, next) => {
     ).select("-password");
 
     res.status(200).json({
-      success:  true,
-      message:  updatedUser.isBanned ? "Đã khóa tài khoản" : "Đã mở khóa tài khoản",
-      data:     updatedUser,
+      success: true,
+      message: updatedUser.isBanned ? "Đã khóa tài khoản" : "Đã mở khóa tài khoản",
+      data:    updatedUser,
     });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 };
 
 /* ═══════════════════════════════════════════
    THỐNG KÊ TUẦN (7 ngày gần nhất)
 ═══════════════════════════════════════════ */
 const getDailyStats = async () => {
-  const days    = [];
-  const now     = new Date();
-  const LABELS  = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
-  const MONTHS  = ["Th1","Th2","Th3","Th4","Th5","Th6","Th7","Th8","Th9","Th10","Th11","Th12"];
+  const now    = new Date();
+  const LABELS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+  const MONTHS = [
+    "Th1","Th2","Th3","Th4","Th5","Th6",
+    "Th7","Th8","Th9","Th10","Th11","Th12",
+  ];
 
   // ── Tính ngày đầu tuần (Thứ 2) ──
   const startOfWeek  = new Date(now);
-  const currentDay   = now.getDay(); // 0=CN
+  const currentDay   = now.getDay(); // 0 = CN
   const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay;
   startOfWeek.setDate(now.getDate() + diffToMonday);
   startOfWeek.setHours(0, 0, 0, 0);
 
-  for (let i = 0; i < 7; i++) {
-    const startDay = new Date(startOfWeek);
-    startDay.setDate(startOfWeek.getDate() + i);
-    startDay.setHours(0, 0, 0, 0);
+  const days = await Promise.all(
+    Array.from({ length: 7 }, async (_, i) => {
+      const startDay = new Date(startOfWeek);
+      startDay.setDate(startOfWeek.getDate() + i);
+      startDay.setHours(0, 0, 0, 0);
 
-    const endDay = new Date(startDay);
-    endDay.setHours(23, 59, 59, 999);
+      const endDay = new Date(startDay);
+      endDay.setHours(23, 59, 59, 999);
 
-    const dayOfWeek = startDay.getDay();
-    const label     = LABELS[dayOfWeek];
-    const dateStr   = `${startDay.getDate()}/${MONTHS[startDay.getMonth()]}`;
-    const isToday   = startDay.toDateString() === now.toDateString();
+      const dayOfWeek = startDay.getDay();
+      const label     = LABELS[dayOfWeek];
+      const dateStr   = `${startDay.getDate()}/${MONTHS[startDay.getMonth()]}`;
+      const isToday   = startDay.toDateString() === now.toDateString();
 
-    // ✅ Bài hát mới - dùng createdAt (đúng)
-    const songsCount = await Song.countDocuments({
-      createdAt: { $gte: startDay, $lte: endDay },
-      status:    "approved",
-    });
+      const [songsCount, usersCount, playsCount] = await Promise.all([
+        Song.countDocuments({
+          createdAt: { $gte: startDay, $lte: endDay },
+          status:    "approved",
+        }),
+        User.countDocuments({
+          createdAt: { $gte: startDay, $lte: endDay },
+        }),
+        PlayHistory.countDocuments({
+          playedAt: { $gte: startDay, $lte: endDay },
+        }),
+      ]);
 
-    // ✅ User mới - dùng createdAt (đúng)
-    const usersCount = await User.countDocuments({
-      createdAt: { $gte: startDay, $lte: endDay },
-    });
-
-    // ✅ Lượt nghe - dùng PlayHistory.playedAt (ĐÚNG ngày nghe thực tế)
-    const playsCount = await PlayHistory.countDocuments({
-      playedAt: { $gte: startDay, $lte: endDay },
-    });
-
-    days.push({
-      day:     `${label}\n${dateStr}`,
-      label,
-      date:    dateStr,
-      songs:   songsCount,
-      users:   usersCount,
-      plays:   playsCount, // ← Lượt nghe đúng ngày
-      isToday,
-    });
-  }
+      return {
+        day:     `${label}\n${dateStr}`,
+        label,
+        date:    dateStr,
+        songs:   songsCount,
+        users:   usersCount,
+        plays:   playsCount,
+        isToday,
+      };
+    })
+  );
 
   return days;
 };
@@ -230,45 +353,44 @@ const getDailyStats = async () => {
    THỐNG KÊ 12 THÁNG
 ═══════════════════════════════════════════ */
 const getMonthlyStats = async () => {
-  const months = [];
-  const now    = new Date();
+  const now = new Date();
 
-  for (let i = 11; i >= 0; i--) {
-    const date       = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const startMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-    const endMonth   = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+  const months = await Promise.all(
+    Array.from({ length: 12 }, async (_, i) => {
+      const monthIndex = 11 - i;
+      const date       = new Date(now.getFullYear(), now.getMonth() - monthIndex, 1);
+      const startMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+      const endMonth   = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+      const label      = `T${date.getMonth() + 1}`;
 
-    const label = `T${date.getMonth() + 1}`;
+      const [songsCount, usersCount, playsCount] = await Promise.all([
+        Song.countDocuments({
+          createdAt: { $gte: startMonth, $lte: endMonth },
+          status:    "approved",
+        }),
+        User.countDocuments({
+          createdAt: { $gte: startMonth, $lte: endMonth },
+        }),
+        PlayHistory.countDocuments({
+          playedAt: { $gte: startMonth, $lte: endMonth },
+        }),
+      ]);
 
-    // ✅ Bài hát mới theo tháng
-    const songsCount = await Song.countDocuments({
-      createdAt: { $gte: startMonth, $lte: endMonth },
-      status:    "approved",
-    });
+      return {
+        month: label,
+        songs: songsCount,
+        users: usersCount,
+        plays: playsCount,
+      };
+    })
+  );
 
-    // ✅ User mới theo tháng
-    const usersCount = await User.countDocuments({
-      createdAt: { $gte: startMonth, $lte: endMonth },
-    });
-
-    // ✅ Lượt nghe theo tháng - dùng PlayHistory.playedAt
-    const playsCount = await PlayHistory.countDocuments({
-      playedAt: { $gte: startMonth, $lte: endMonth },
-    });
-
-    months.push({
-      month: label,
-      songs: songsCount,
-      users: usersCount,
-      plays: playsCount, // ← Lượt nghe đúng tháng
-    });
-  }
-
-  return months;
+  // Trả về đúng thứ tự tháng cũ → mới
+  return months.reverse();
 };
 
 /* ═══════════════════════════════════════════
-   TỔNG HỢP STATS
+   TỔNG HỢP STATS (Admin)
 ═══════════════════════════════════════════ */
 const getStats = async (req, res, next) => {
   try {
@@ -276,7 +398,7 @@ const getStats = async (req, res, next) => {
       totalUsers,
       totalSongs,
       totalAdmins,
-      totalPlays,   // ← Đếm từ PlayHistory
+      totalPlays,
       recentSongs,
       recentUsers,
       dailyStats,
@@ -285,7 +407,7 @@ const getStats = async (req, res, next) => {
       User.countDocuments(),
       Song.countDocuments({ status: "approved" }),
       User.countDocuments({ role: "admin" }),
-      PlayHistory.countDocuments(),         // ✅ Tổng lượt nghe từ PlayHistory
+      PlayHistory.countDocuments(),
       Song.find({ status: "approved" })
         .sort({ createdAt: -1 })
         .limit(5)
@@ -316,6 +438,9 @@ const getStats = async (req, res, next) => {
   }
 };
 
+/* ═══════════════════════════════════════════
+   EXPORTS
+═══════════════════════════════════════════ */
 module.exports = {
   getFavorites,
   updateProfile,
